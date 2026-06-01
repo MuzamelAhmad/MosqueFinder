@@ -40,7 +40,7 @@ class _CustomBottonState extends State<CustomBotton> {
             ),
           ),
         ),
-      ).paddingAll(10),
+      ),
     );
   }
 }

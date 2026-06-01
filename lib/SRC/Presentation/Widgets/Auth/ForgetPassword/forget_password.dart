@@ -38,6 +38,7 @@ class _ForgetPasswordState extends State<ForgetPassword> {
               SizedBox(height: 10.h),
               Container(
                 height: 250.h,
+                color: Colors.amber,
                 child: Consumer<TextFieldController>(
                   builder: (context, value, child) {
                     return TextFromFieldCommon(

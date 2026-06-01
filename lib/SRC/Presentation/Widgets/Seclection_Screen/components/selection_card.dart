@@ -37,11 +37,13 @@ class SelectionCard extends StatelessWidget {
                 image: DecorationImage(image: AssetImage(iConData)),
               ),
             ),
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: Colors.white),
+            Flexible(
+              child: Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: Colors.white),
+              ),
             ),
           ],
         ),
