@@ -26,26 +26,34 @@ class ImamRepository {
   // ═══════════════════════════════════════════
   //             GET — Fetch Imam Data
   // ═══════════════════════════════════════════
+  Future<Map<String, dynamic>?> getImamDataByUserId(String userId) async {
+    final res = await Supabase.instance.client
+        .from('ImamData') // <-- your actual table name
+        .select()
+        .eq('id', userId) // <-- must match your column
+        .maybeSingle();
 
-  Future<ImamModel?> getImamData() async {
-    try {
-      if (_currentEmail == null) throw Exception('No user logged in');
-
-      final response = await _supabase
-          .from('ImamData')
-          .select()
-          .eq('email', _currentEmail!)
-          .single();
-
-      return ImamModel.fromJson(response);
-    } on PostgrestException catch (e) {
-      debugPrint('Supabase GET error: ${e.message}');
-      return null;
-    } catch (e) {
-      debugPrint('GET error: $e');
-      return null;
-    }
+    return res;
   }
+  // Future<ImamModel?> getImamData() async {
+  //   try {
+  //     if (_currentEmail == null) throw Exception('No user logged in');
+  //
+  //     final response = await _supabase
+  //         .from('ImamData')
+  //         .select()
+  //         .eq('email', _currentEmail!)
+  //         .single();
+  //
+  //     return ImamModel.fromJson(response);
+  //   } on PostgrestException catch (e) {
+  //     debugPrint('Supabase GET error: ${e.message}');
+  //     return null;
+  //   } catch (e) {
+  //     debugPrint('GET error: $e');
+  //     return null;
+  //   }
+  // }
 
   // ═══════════════════════════════════════════
   //         GET — Fetch Prayer Times Only

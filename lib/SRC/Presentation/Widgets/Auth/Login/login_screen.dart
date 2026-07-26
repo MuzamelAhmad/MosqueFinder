@@ -15,6 +15,16 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     Provider.of<TextFieldController>(context, listen: false);
     final theme = Theme.of(context);
@@ -198,6 +208,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                             .text
                                             .trim(),
                                       );
+                                      // print(
+                                      //   "login data -----------${textController.text.text.trim()}",
+                                      // );
+                                      // print(
+                                      //   "login data -----------${passwordController.getPassword.text.trim()}",
+                                      // );
                                     },
                                   );
                           },

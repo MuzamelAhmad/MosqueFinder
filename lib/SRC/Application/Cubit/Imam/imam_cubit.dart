@@ -82,55 +82,48 @@ class ImamCubit extends Cubit<ImamState> {
     emit(ImamLoading());
 
     try {
-      // 1. Check if user already exists in ImamData
-      //    (handles case where auth succeeded but insert failed before)
-      final existing = await _repo.getImamData();
-      String userId;
+      // 1) Supabase Auth signup
+      final authResponse = await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+      );
 
-      if (existing != null) {
-        // Already has a row — just get userId
-        userId = Supabase.instance.client.auth.currentUser!.id;
-      } else {
-        // 2. Supabase Auth signup
-        final authResponse = await Supabase.instance.client.auth.signUp(
-          email: email,
-          password: password,
-        );
+      final user = authResponse.user;
+      print('immmammmmm $user');
+      if (user == null) {
+        emit(ImamSignupError('Signup failed. Try again.'));
+        return;
+      }
 
-        if (authResponse.user == null) {
-          emit(ImamSignupError('Signup failed. Try again.'));
-          return;
-        }
+      final userId = user.id;
 
-        userId = authResponse.user!.id;
+      print("user id ------------------$userId");
 
-        // 3. Build model
-        final imam = ImamModel(
-          id: 0,
-          imamName: fullName,
-          mosqueName: mosqueName,
-          city: city,
-          latitude: latitude,
-          longitude: longitude,
-          email: email,
-          password: password,
-          prayTime: PrayerTimesModel(
-            fajr: '--:--',
-            dhuhr: '--:--',
-            jumma: '--:--',
-            asr: '--:--',
-            maghrib: '--:--',
-            isha: '--:--',
-          ),
-        );
+      // 2) Insert ImamData for THIS userId
+      final imam = ImamModel(
+        id: userId, // or omit if your DB uses serial/identity
+        imamName: fullName,
+        mosqueName: mosqueName,
+        city: city,
+        latitude: latitude,
+        longitude: longitude,
+        email: email,
 
-        // 4. Insert into ImamData
-        final success = await _repo.postImamData(imam);
+        // ✅ remove `password` from your model entirely
+        prayTime: PrayerTimesModel(
+          fajr: '--:--',
+          dhuhr: '--:--',
+          jumma: '--:--',
+          asr: '--:--',
+          maghrib: '--:--',
+          isha: '--:--',
+        ),
+      );
 
-        if (!success) {
-          emit(ImamSignupError('Failed to save data. Try again.'));
-          return;
-        }
+      final success = await _repo.postImamData(imam);
+      if (!success) {
+        emit(ImamSignupError('Failed to save data. Try again.'));
+        return;
       }
 
       emit(ImamSignupSuccess(userId));
@@ -148,13 +141,21 @@ class ImamCubit extends Cubit<ImamState> {
 
   // ═══════════════════════════════════════════
   //           Fetch Imam Data
-  // ═══════════════════════════════════════════
+  // ════════════════════════════════════
   Future<void> getImamData() async {
     emit(ImamLoading());
+
     try {
-      final imam = await _repo.getImamData();
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        emit(ImamError('User not logged in'));
+        return;
+      }
+
+      final imam = await _repo.getImamDataByUserId(user.id);
+      print('Raw response: $imam');
       if (imam != null) {
-        emit(ImamLoaded(imam));
+        emit(ImamLoaded(ImamModel.fromJson(imam)));
       } else {
         emit(ImamError('No data found'));
       }
@@ -195,14 +196,14 @@ class ImamCubit extends Cubit<ImamState> {
       );
 
       if (success) {
-        emit(PrayerTimesUpdateSuccess());
+        emit(SinglePrayerTimeUpdateSuccess());
         // Refresh prayer times after update
         await getPrayerTimes();
       } else {
-        emit(PrayerTimesUpdateError('Failed to update prayer time'));
+        emit(SinglePrayerTimeUpdateError('Failed to update prayer time'));
       }
     } catch (e) {
-      emit(PrayerTimesUpdateError('Update error: $e'));
+      emit(SinglePrayerTimeUpdateError('Update error: $e'));
     }
   }
 
@@ -233,28 +234,36 @@ class ImamCubit extends Cubit<ImamState> {
 
     try {
       // 1. Supabase Auth login
-      final authResponse = await Supabase.instance.client.auth
-          .signInWithPassword(email: email, password: password);
+      final authResponse = Supabase.instance.client;
+      final session = await authResponse.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
 
-      if (authResponse.user == null) {
+      if (session.user == null) {
         emit(ImamLoginError('Login failed. Check your credentials.'));
+        print("login data -----------${session.user}");
         return;
       }
 
-      final String userId = authResponse.user!.id;
+      final String userId = session.user!.id;
 
       // 2. Verify imam exists in ImamData table
-      final imam = await _repo.getImamData();
+      final imam = await _repo.getImamDataByUserId(userId);
 
       if (imam == null) {
         emit(ImamLoginError('Imam account not found.'));
         return;
       }
+      print(imam);
+      // print("login data -----------${session.user}");
 
       emit(ImamLoginSuccess(userId));
     } on AuthException catch (e) {
+      print("login data -----------${e.message}");
       emit(ImamLoginError(e.message));
     } catch (e) {
+      // print("login data -----------$e");
       emit(ImamLoginError('Login error: $e'));
     }
   }

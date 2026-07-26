@@ -1,12 +1,11 @@
 class ImamModel {
-  final int id;
+  final String id;
   final String imamName;
   final String mosqueName;
   final String city;
   final double latitude;
   final double longitude;
   final String email;
-  final String password;
   final PrayerTimesModel? prayTime;
 
   ImamModel({
@@ -17,21 +16,19 @@ class ImamModel {
     required this.latitude,
     required this.longitude,
     required this.email,
-    required this.password,
     this.prayTime,
   });
 
   // ✅ From Supabase JSON
   factory ImamModel.fromJson(Map<String, dynamic> json) {
     return ImamModel(
-      id: json['id'] as int,
+      id: json['id'] as String,
       imamName: json['Imam name'] as String,
-      mosqueName: json['Mosque name'] as String,
+      mosqueName: json['mosque name'] as String,
       city: json['city'] as String,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       email: json['email'] as String,
-      password: json['password'] as String,
       prayTime: json['Praytime'] != null
           ? PrayerTimesModel.fromJson(json['Praytime'])
           : null,
@@ -48,14 +45,13 @@ class ImamModel {
       'latitude': latitude,
       'longitude': longitude,
       'email': email,
-      'password': password,
       'Praytime': prayTime?.toJson(),
     };
   }
 
   // ✅ CopyWith — useful for updating single fields
   ImamModel copyWith({
-    int? id,
+    String? id,
     String? imamName,
     String? mosqueName,
     String? city,
@@ -73,7 +69,6 @@ class ImamModel {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       email: email ?? this.email,
-      password: password ?? this.password,
       prayTime: prayTime ?? this.prayTime,
     );
   }

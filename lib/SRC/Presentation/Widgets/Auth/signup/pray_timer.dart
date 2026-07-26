@@ -7,8 +7,7 @@ import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/components/ima
 import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/imam_screen.dart';
 
 class PrayTimer extends StatefulWidget {
-  final String userId; // 👈 received from SignupScreen
-
+  final String userId;
   const PrayTimer({super.key, required this.userId});
 
   @override
@@ -19,15 +18,13 @@ class _PrayTimerState extends State<PrayTimer> {
   final List<Map<String, dynamic>> _prayerTimes = [
     {'prayName': 'Fajr', 'prayTime': '--:--', 'key': 'fajr'},
     {'prayName': 'Dhuhr', 'prayTime': '--:--', 'key': 'dhuhr'},
-    {'prayName': 'jumma', 'prayTime': '--:--', 'key': 'jumma'},
+    {'prayName': 'Jumma', 'prayTime': '--:--', 'key': 'jumma'},
     {'prayName': 'Asr', 'prayTime': '--:--', 'key': 'asr'},
     {'prayName': 'Maghrib', 'prayTime': '--:--', 'key': 'maghrib'},
     {'prayName': 'Isha', 'prayTime': '--:--', 'key': 'isha'},
   ];
 
-  bool _isSaving = false;
-
-  // ── Show TimePicker and update local list ──
+  // ── TimePicker — only updates local list ──
   Future<void> _editTime(int index) async {
     final current = _prayerTimes[index]['prayTime'] as String;
     final parts = current.split(':');
@@ -42,17 +39,15 @@ class _PrayTimerState extends State<PrayTimer> {
 
     if (picked == null) return;
 
-    // Update local UI only — not saved yet
+    // ✅ setState is correct here — only local list, not cubit
     setState(() {
       _prayerTimes[index]['prayTime'] =
           '${picked.hour}:${picked.minute.toString().padLeft(2, '0')}';
     });
   }
 
-  // ── Check all times are set ────────────────
   bool get _allTimesSet => _prayerTimes.every((p) => p['prayTime'] != '--:--');
 
-  // ── Save all times to Supabase ─────────────
   Future<void> _saveAndContinue() async {
     if (!_allTimesSet) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,18 +56,16 @@ class _PrayTimerState extends State<PrayTimer> {
       return;
     }
 
-    // Build PrayerTimesModel from local list
-    final prayerTimesModel = PrayerTimesModel(
-      fajr: _prayerTimes[0]['prayTime'],
-      dhuhr: _prayerTimes[1]['prayTime'],
-      jumma: _prayerTimes[2]['prayTime'],
-      asr: _prayerTimes[3]['prayTime'],
-      maghrib: _prayerTimes[4]['prayTime'],
-      isha: _prayerTimes[5]['prayTime'],
+    context.read<ImamCubit>().updatePrayerTimes(
+      PrayerTimesModel(
+        fajr: _prayerTimes[0]['prayTime'],
+        dhuhr: _prayerTimes[1]['prayTime'],
+        jumma: _prayerTimes[2]['prayTime'],
+        asr: _prayerTimes[3]['prayTime'],
+        maghrib: _prayerTimes[4]['prayTime'],
+        isha: _prayerTimes[5]['prayTime'],
+      ),
     );
-
-    // Save via cubit
-    context.read<ImamCubit>().updatePrayerTimes(prayerTimesModel);
   }
 
   @override
@@ -81,26 +74,24 @@ class _PrayTimerState extends State<PrayTimer> {
 
     return BlocListener<ImamCubit, ImamState>(
       listener: (context, state) {
-        // ── Success → go to ImamScreen ─────────
+        // ── Success → navigate ─────────────────
         if (state is PrayerTimesUpdateSuccess) {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (context) => ImamScreen(userId: widget.userId),
             ),
-            (route) => false, // 👈 clears signup stack
+            (route) => false,
           );
         }
 
-        // ── Error ──────────────────────────────
+        // ── Error → Snack bar ───────────────────
         if (state is PrayerTimesUpdateError) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(state.message)));
         }
-
-        // ── Loading state ──────────────────────
-        setState(() => _isSaving = state is ImamLoading);
+        // ✅ No setState here anymore
       },
 
       child: Scaffold(
@@ -117,9 +108,8 @@ class _PrayTimerState extends State<PrayTimer> {
           child: SafeArea(
             child: CustomScrollView(
               slivers: [
-                // ── AppBar ─────────────────────────────
                 SliverAppBar(
-                  automaticallyImplyLeading: false, // no back button
+                  automaticallyImplyLeading: false,
                   iconTheme: theme.iconTheme,
                   expandedHeight: 150,
                   elevation: 0,
@@ -150,7 +140,6 @@ class _PrayTimerState extends State<PrayTimer> {
                   ),
                 ),
 
-                // ── Prayer Time List ───────────────────
                 SliverList.builder(
                   itemCount: _prayerTimes.length,
                   itemBuilder: (context, index) {
@@ -176,7 +165,6 @@ class _PrayTimerState extends State<PrayTimer> {
                               _prayerTimes[index]['prayTime'],
                               textAlign: TextAlign.left,
                               style: theme.textTheme.labelLarge?.copyWith(
-                                // green when set, default when not
                                 color: isSet
                                     ? Colors.green
                                     : theme.colorScheme.onPrimary,
@@ -188,7 +176,6 @@ class _PrayTimerState extends State<PrayTimer> {
                             child: IconButton(
                               icon: Icon(
                                 Icons.edit_calendar_outlined,
-                                // green when set
                                 color: isSet
                                     ? Colors.green
                                     : theme.colorScheme.onPrimary,
@@ -202,14 +189,20 @@ class _PrayTimerState extends State<PrayTimer> {
                   },
                 ),
 
-                // ── Save Button ────────────────────────
+                // ── Save button — uses BlocBuilder for loading ──
                 SliverToBoxAdapter(
-                  child: _isSaving
-                      ? const Center(child: CircularProgressIndicator())
-                      : CustomBotton(
-                          text: 'Save & Continue',
-                          onTap: _saveAndContinue,
-                        ).paddingOnly(top: 20.h, bottom: 20.h),
+                  child: BlocBuilder<ImamCubit, ImamState>(
+                    builder: (context, state) {
+                      // ✅ Loading from cubit state directly
+                      if (state is ImamLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      return CustomBotton(
+                        text: 'Save & Continue',
+                        onTap: _saveAndContinue,
+                      ).paddingOnly(top: 20.h, bottom: 20.h);
+                    },
+                  ),
                 ),
               ],
             ).paddingSymmetric(horizontal: 20.w, vertical: 20.h),

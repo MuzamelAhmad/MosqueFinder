@@ -73,3 +73,11 @@ class PrayerTimesUpdateError extends ImamState {
   final String message;
   PrayerTimesUpdateError(this.message);
 }
+
+// ── Single Prayer Time Update ─────────────────
+class SinglePrayerTimeUpdateSuccess extends ImamState {}
+
+class SinglePrayerTimeUpdateError extends ImamState {
+  final String message;
+  SinglePrayerTimeUpdateError(this.message);
+}
