@@ -142,8 +142,8 @@ class ImamCubit extends Cubit<ImamState> {
   // ═══════════════════════════════════════════
   //           Fetch Imam Data
   // ════════════════════════════════════
-  Future<void> getImamData() async {
-    emit(ImamLoading());
+  Future<void> getImamData({bool showLoading = true}) async {
+    if (showLoading) emit(ImamLoading());
 
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -196,9 +196,23 @@ class ImamCubit extends Cubit<ImamState> {
       );
 
       if (success) {
+        // 1. Update local state immediately if we have it
+        if (state is ImamLoaded) {
+          final currentImam = (state as ImamLoaded).imam;
+          final updatedTimes = currentImam.prayTime?.copyWith(
+            fajr: prayerKey == 'fajr' ? newTime : null,
+            dhuhr: prayerKey == 'dhuhr' ? newTime : null,
+            jumma: prayerKey == 'jumma' ? newTime : null,
+            asr: prayerKey == 'asr' ? newTime : null,
+            maghrib: prayerKey == 'maghrib' ? newTime : null,
+            isha: prayerKey == 'isha' ? newTime : null,
+          );
+          emit(ImamLoaded(currentImam.copyWith(prayTime: updatedTimes)));
+        }
+
         emit(SinglePrayerTimeUpdateSuccess());
-        // Refresh prayer times after update
-        await getPrayerTimes();
+        // 2. Refresh full Imam data silently to stay in sync
+        await getImamData(showLoading: false);
       } else {
         emit(SinglePrayerTimeUpdateError('Failed to update prayer time'));
       }
@@ -217,12 +231,83 @@ class ImamCubit extends Cubit<ImamState> {
 
       if (success) {
         emit(PrayerTimesUpdateSuccess());
-        await getPrayerTimes();
+        await getImamData(showLoading: false);
       } else {
         emit(PrayerTimesUpdateError('Failed to update prayer times'));
       }
     } catch (e) {
       emit(PrayerTimesUpdateError('Update error: $e'));
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //             Update Profile
+  // ═══════════════════════════════════════════
+  Future<void> updateProfile({
+    required String fullName,
+    required String mosqueName,
+    required String city,
+  }) async {
+    emit(ImamLoading());
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        emit(ImamProfileUpdateError('User not logged in'));
+        return;
+      }
+
+      final currentData = await _repo.getImamDataByUserId(user.id);
+      if (currentData == null) {
+        emit(ImamProfileUpdateError('Failed to fetch current data'));
+        return;
+      }
+
+      final imam = ImamModel.fromJson(currentData).copyWith(
+        imamName: fullName,
+        mosqueName: mosqueName,
+        city: city,
+      );
+
+      final success = await _repo.updateImamData(imam);
+
+      if (success) {
+        emit(ImamProfileUpdateSuccess());
+        await getImamData(showLoading: false);
+      } else {
+        emit(ImamProfileUpdateError('Failed to update profile'));
+      }
+    } catch (e) {
+      emit(ImamProfileUpdateError('Update profile error: $e'));
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //             Forget Password
+  // ═══════════════════════════════════════════
+  Future<void> forgetPassword({required String email}) async {
+    // 1. Validate email format
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      emit(ImamForgetPasswordError('Please enter a valid email address'));
+      return;
+    }
+
+    emit(ImamLoading());
+    try {
+      // 2. Check if email exists in our database
+      final exists = await _repo.checkEmailExists(email);
+      if (!exists) {
+        emit(ImamForgetPasswordError('Email not found. Please register first.'));
+        return;
+      }
+
+      // 3. Send reset email
+      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      emit(ImamForgetPasswordSuccess());
+    } on AuthException catch (e) {
+      emit(ImamForgetPasswordError(e.message));
+    } catch (e) {
+      emit(ImamForgetPasswordError('Error: $e'));
     }
   }
 

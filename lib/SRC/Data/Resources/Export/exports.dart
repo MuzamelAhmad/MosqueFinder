@@ -7,4 +7,5 @@ export 'package:mosque_finder/SRC/Presentation/Common/PasswordTextField/password
 export 'package:mosque_finder/SRC/Presentation/Common/TextFromField/Controller/text_field_controller.dart';
 export 'package:mosque_finder/SRC/Presentation/Common/TextFromField/text_from_field.dart';
 export 'package:mosque_finder/SRC/Presentation/Widgets/Auth/ForgetPassword/forget_password.dart';
+export 'package:mosque_finder/SRC/Presentation/Common/Utils/snack_bar_utils.dart';
 export 'package:provider/provider.dart';

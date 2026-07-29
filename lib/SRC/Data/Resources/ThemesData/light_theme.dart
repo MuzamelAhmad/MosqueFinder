@@ -77,6 +77,19 @@ mixin LightTheme {
           borderSide: BorderSide(color: ColorScheme.light().secondary),
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primaryColor,
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontFamily: 'ScheherazadeNew-Regular',
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 4,
+      ),
     );
   }
 }

@@ -30,12 +30,19 @@ class TextFieldController with ChangeNotifier {
   }
 
   void fullNameClearText() {
-    textEditingController.clear();
+    nameEditingController.clear();
     notifyListeners();
   }
 
   void mosqueNameClearText() {
+    mosqueNameEditingController.clear();
+    notifyListeners();
+  }
+
+  void allClear() {
     textEditingController.clear();
+    nameEditingController.clear();
+    mosqueNameEditingController.clear();
     notifyListeners();
   }
 }

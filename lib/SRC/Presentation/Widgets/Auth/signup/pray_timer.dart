@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:mosque_finder/SRC/Application/Cubit/Imam/imam_cubit.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
 import 'package:mosque_finder/SRC/Data/repositories/ImamModel/imam_model.dart';
+import 'package:mosque_finder/SRC/Presentation/Common/CustomTimePicker/custom_time_picker.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/components/imam_pray_card.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/imam_screen.dart';
+import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
 
 class PrayTimer extends StatefulWidget {
   final String userId;
@@ -27,22 +30,30 @@ class _PrayTimerState extends State<PrayTimer> {
   // ── TimePicker — only updates local list ──
   Future<void> _editTime(int index) async {
     final current = _prayerTimes[index]['prayTime'] as String;
-    final parts = current.split(':');
+    TimeOfDay initial = TimeOfDay.now();
 
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: int.tryParse(parts[0]) ?? 0,
-        minute: int.tryParse(parts[1]) ?? 0,
-      ),
+    try {
+      if (current != '--:--') {
+        final dt = DateFormat('h:mm a').parse(current);
+        initial = TimeOfDay(hour: dt.hour, minute: dt.minute);
+      }
+    } catch (e) {
+      // Fallback to now if parsing fails
+    }
+
+    final picked = await CustomTimePicker.show(
+      context,
+      initialTime: initial,
     );
 
     if (picked == null) return;
 
-    // ✅ setState is correct here — only local list, not cubit
+    final now = DateTime.now();
+    final dt = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+    final formatted = DateFormat('h:mm a').format(dt);
+
     setState(() {
-      _prayerTimes[index]['prayTime'] =
-          '${picked.hour}:${picked.minute.toString().padLeft(2, '0')}';
+      _prayerTimes[index]['prayTime'] = formatted;
     });
   }
 
@@ -50,9 +61,7 @@ class _PrayTimerState extends State<PrayTimer> {
 
   Future<void> _saveAndContinue() async {
     if (!_allTimesSet) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please set all prayer times first')),
-      );
+      CustomSnackBar.showError(context, 'Please set all prayer times first');
       return;
     }
 
@@ -76,6 +85,9 @@ class _PrayTimerState extends State<PrayTimer> {
       listener: (context, state) {
         // ── Success → navigate ─────────────────
         if (state is PrayerTimesUpdateSuccess) {
+          // ✅ Persist login state
+          SharedPrefsService.saveUserId(widget.userId);
+
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
@@ -87,9 +99,7 @@ class _PrayTimerState extends State<PrayTimer> {
 
         // ── Error → Snack bar ───────────────────
         if (state is PrayerTimesUpdateError) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.message)));
+          CustomSnackBar.showError(context, state.message);
         }
         // ✅ No setState here anymore
       },

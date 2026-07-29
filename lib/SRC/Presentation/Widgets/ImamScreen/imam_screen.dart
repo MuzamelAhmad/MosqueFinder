@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:mosque_finder/SRC/Application/Cubit/Imam/imam_cubit.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
+import 'package:mosque_finder/SRC/Data/repositories/ImamModel/imam_model.dart';
 import 'package:mosque_finder/SRC/Presentation/CustomDrawer/customize_drawer_screen.dart';
+import 'package:mosque_finder/SRC/Presentation/Common/CustomTimePicker/custom_time_picker.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/components/imam_pray_card.dart';
+import 'package:mosque_finder/SRC/Application/Services/notification_service.dart';
 
 class ImamScreen extends StatefulWidget {
   final String userId;
@@ -14,6 +18,9 @@ class ImamScreen extends StatefulWidget {
 }
 
 class _ImamScreenState extends State<ImamScreen> {
+  // ✅ Cache the last loaded imam to keep UI "sticky" during updates
+  ImamModel? _cachedImam;
+
   @override
   void initState() {
     super.initState();
@@ -22,29 +29,25 @@ class _ImamScreenState extends State<ImamScreen> {
 
   // ── Time picker + update via cubit ──────────
   Future<void> _selectTime(BuildContext context, String prayerKey) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
+    final TimeOfDay? picked = await CustomTimePicker.show(
+      context,
       initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
-        );
-      },
     );
 
     if (picked == null) return;
 
-    // Format as "4:30" — consistent with your Supabase data
-    final formatted =
-        '${picked.hour}:${picked.minute.toString().padLeft(2, '0')}';
+    // Format as "4:30 PM" — 12-hour format
+    final now = DateTime.now();
+    final dt =
+        DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+    final formatted = DateFormat('h:mm a').format(dt);
 
     if (context.mounted) {
       // ✅ Call cubit to update single prayer time
       context.read<ImamCubit>().updateSinglePrayerTime(
-        prayerKey: prayerKey,
-        newTime: formatted,
-      );
+            prayerKey: prayerKey,
+            newTime: formatted,
+          );
     }
   }
 
@@ -52,230 +55,224 @@ class _ImamScreenState extends State<ImamScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Welcome Imam',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onPrimary,
-          ),
-        ),
-        centerTitle: true,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: theme.colorScheme.onPrimary),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-      ),
-      drawer: CustomizeDrawerScreen(),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: AppColors.bgColors,
-          ),
-        ),
-        child: SafeArea(
-          child: BlocConsumer<ImamCubit, ImamState>(
-            listener: (context, state) {
-              // ── Show snackbar on error ─────────
-              if (state is SinglePrayerTimeUpdateError) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(state.message)));
-              }
+    return BlocConsumer<ImamCubit, ImamState>(
+      listener: (context, state) {
+        // ── Cache data when it arrives ──────
+        if (state is ImamLoaded) {
+          _cachedImam = state.imam;
+          // ✅ Schedule notifications whenever data is loaded/updated
+          NotificationService.schedulePrayerNotifications(state.imam.prayTime);
+        }
 
-              // ── Success — data already refreshed
-              //    in cubit via ImamLoaded ─────────
-              if (state is SinglePrayerTimeUpdateSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Prayer time updated ✅'),
-                    duration: Duration(seconds: 1),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            builder: (context, state) {
-              // ── Loading ────────────────────────
-              if (state is ImamLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
+        // ── Show Snack bar on error ─────────
+        if (state is SinglePrayerTimeUpdateError) {
+          CustomSnackBar.showError(context, state.message);
+        }
 
-              // ── Error ──────────────────────────
-              if (state is ImamError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
+        // ── Success Feedback ────────────────
+        if (state is SinglePrayerTimeUpdateSuccess) {
+          CustomSnackBar.showSuccess(context, 'Prayer time updated ✅');
+        }
+      },
+      builder: (context, state) {
+        // Preference: Use current state data, fallback to cache
+        final imamToShow = (state is ImamLoaded) ? state.imam : _cachedImam;
+
+        return Scaffold(
+          extendBodyBehindAppBar: true,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              'Welcome Imam',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+              ),
+            ),
+            centerTitle: true,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: Icon(Icons.menu, color: theme.colorScheme.onPrimary),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+          ),
+          // ✅ Drawer uses cached imam if available
+          drawer: imamToShow != null
+              ? CustomizeDrawerScreen(imam: imamToShow)
+              : null,
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: AppColors.bgColors,
+              ),
+            ),
+            child: SafeArea(
+              child: _buildBody(context, state, theme, imamToShow),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(BuildContext context, ImamState state, ThemeData theme,
+      ImamModel? imamToShow) {
+    // ── 1. Show Full Screen Loader ONLY if we have NO data at all
+    if (state is ImamLoading && imamToShow == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // ── 2. Show Error ONLY if we have no cached data to fall back on
+    if (state is ImamError && imamToShow == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline,
+                color: theme.colorScheme.onPrimary, size: 48),
+            SizedBox(height: 12.h),
+            Text(state.message,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.onPrimary)),
+            SizedBox(height: 12.h),
+            ElevatedButton(
+              onPressed: () => context.read<ImamCubit>().getImamData(),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── 3. Render Dashboard if we have an Imam (either current or cached)
+    if (imamToShow != null) {
+      final prayerJson = imamToShow.prayTime;
+
+      final prayerList = [
+        {'name': 'Fajr', 'key': 'fajr', 'time': prayerJson?.fajr ?? '--:--'},
+        {'name': 'Dhuhr', 'key': 'dhuhr', 'time': prayerJson?.dhuhr ?? '--:--'},
+        {'name': 'Jumma', 'key': 'jumma', 'time': prayerJson?.jumma ?? '--:--'},
+        {'name': 'Asr', 'key': 'asr', 'time': prayerJson?.asr ?? '--:--'},
+        {
+          'name': 'Maghrib',
+          'key': 'maghrib',
+          'time': prayerJson?.maghrib ?? '--:--'
+        },
+        {'name': 'Isha', 'key': 'isha', 'time': prayerJson?.isha ?? '--:--'},
+      ];
+
+      return Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                automaticallyImplyLeading: false,
+                iconTheme: theme.iconTheme,
+                expandedHeight: 150,
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                flexibleSpace: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      imamToShow.imamName,
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onPrimary,
-                        size: 48,
+                        fontWeight: FontWeight.bold,
                       ),
-                      SizedBox(height: 12.h),
-                      Text(
-                        state.message,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onPrimary,
+                    ),
+                    SizedBox(height: 20.h),
+                    ImamPrayCard(
+                      widget: Center(
+                        child: Text(
+                          imamToShow.mosqueName,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      SizedBox(height: 12.h),
-                      ElevatedButton(
-                        onPressed: () =>
-                            context.read<ImamCubit>().getImamData(),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                );
-              }
+                    ),
+                  ],
+                ),
+              ),
+              SliverList.builder(
+                itemCount: prayerList.length,
+                itemBuilder: (context, index) {
+                  final time = prayerList[index]['time']!;
+                  final key = prayerList[index]['key']!;
+                  final name = prayerList[index]['name']!;
+                  final isSet = time != '--:--';
 
-              // ── Data Loaded ────────────────────
-              if (state is ImamLoaded) {
-                final imam = state.imam;
-                final prayerJson = imam.prayTime;
-
-                // ✅ Prayer list with key for update
-                final prayerList = [
-                  {
-                    'name': 'Fajr',
-                    'key': 'fajr',
-                    'time': prayerJson?.fajr ?? '--:--',
-                  },
-                  {
-                    'name': 'Dhuhr',
-                    'key': 'dhuhr',
-                    'time': prayerJson?.dhuhr ?? '--:--',
-                  },
-                  {
-                    'name': 'Jumma',
-                    'key': 'jumma',
-                    'time': prayerJson?.jumma ?? '--:--',
-                  },
-                  {
-                    'name': 'Asr',
-                    'key': 'asr',
-                    'time': prayerJson?.asr ?? '--:--',
-                  },
-                  {
-                    'name': 'Maghrib',
-                    'key': 'maghrib',
-                    'time': prayerJson?.maghrib ?? '--:--',
-                  },
-                  {
-                    'name': 'Isha',
-                    'key': 'isha',
-                    'time': prayerJson?.isha ?? '--:--',
-                  },
-                ];
-
-                return CustomScrollView(
-                  slivers: [
-                    SliverAppBar(
-                      automaticallyImplyLeading: false,
-                      iconTheme: theme.iconTheme,
-                      expandedHeight: 150,
-                      elevation: 0,
-                      backgroundColor: Colors.transparent,
-                      flexibleSpace: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            imam.imamName,
-                            style: theme.textTheme.bodyMedium?.copyWith(
+                  return ImamPrayCard(
+                    widget: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            name,
+                            textAlign: TextAlign.left,
+                            style: theme.textTheme.labelLarge?.copyWith(
                               color: theme.colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 20.h),
-                          ImamPrayCard(
-                            widget: Center(
-                              child: Text(
-                                imam.mosqueName,
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  color: theme.colorScheme.onPrimary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            time,
+                            textAlign: TextAlign.left,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              // ✅ Fixed: Green when set, not when empty
+                              color: isSet
+                                  ? Colors.green
+                                  : theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                        Expanded(
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.edit_calendar_outlined,
+                              // ✅ Fixed: Green when set, not when empty
+                              color: isSet
+                                  ? Colors.green
+                                  : theme.colorScheme.onPrimary,
+                            ),
+                            onPressed: () => _selectTime(context, key),
+                          ),
+                        ),
+                      ],
+                    ).paddingAll(10),
+                  ).paddingOnly(top: 10.h, bottom: 10.h);
+                },
+              ),
+            ],
+          ).paddingSymmetric(horizontal: 20.w, vertical: 20.h),
 
-                    SliverList.builder(
-                      itemCount: prayerList.length,
-                      itemBuilder: (context, index) {
-                        final time = prayerList[index]['time']!;
-                        final key = prayerList[index]['key']!;
-                        final name = prayerList[index]['name']!;
-                        final isSet = time != '--:--'; // ✅ fixed logic
+          // ── Optional: Show a small indicator if we are refreshing in background
+          if (state is ImamLoading && imamToShow != null)
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(
+                backgroundColor: Colors.transparent,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white24),
+              ),
+            ),
+        ],
+      );
+    }
 
-                        return ImamPrayCard(
-                          widget: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  name,
-                                  textAlign: TextAlign.left,
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    color: theme.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  time,
-                                  textAlign: TextAlign.left,
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    color:
-                                        isSet // ✅ green when set
-                                        ? Colors.green
-                                        : theme.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.edit_calendar_outlined,
-                                    color:
-                                        isSet // ✅ green when set
-                                        ? Colors.green
-                                        : theme.colorScheme.onPrimary,
-                                  ),
-                                  // ✅ pass key correctly
-                                  onPressed: () => _selectTime(context, key),
-                                ),
-                              ),
-                            ],
-                          ).paddingAll(10),
-                        ).paddingOnly(top: 10.h, bottom: 10.h);
-                      },
-                    ),
-                  ],
-                ).paddingSymmetric(horizontal: 20.w, vertical: 20.h);
-              }
-
-              return const SizedBox.shrink();
-            },
-          ),
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }

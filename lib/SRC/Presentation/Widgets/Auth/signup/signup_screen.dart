@@ -4,6 +4,7 @@ import 'package:mosque_finder/SRC/Application/Cubit/Imam/imam_cubit.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Validator/validators.dart';
 import 'package:mosque_finder/SRC/Data/Resources/export/exports.dart';
 import 'package:mosque_finder/SRC/Presentation/Common/SocialLoginMethods/social_account_card.dart';
+import 'package:mosque_finder/SRC/Presentation/Common/Utils/snack_bar_utils.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/Login/login_screen.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/signup/pray_timer.dart';
 
@@ -38,9 +39,7 @@ class _SignupScreenState extends State<SignupScreen> {
             });
           }
           if (state is ImamLocationError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            CustomSnackBar.showError(context, state.message);
           }
 
           // ── Signup states ────────────────────────
@@ -53,9 +52,7 @@ class _SignupScreenState extends State<SignupScreen> {
             );
           }
           if (state is ImamSignupError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            CustomSnackBar.showError(context, state.message);
           }
         },
         child: Scaffold(
@@ -272,13 +269,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                       );
 
                                   if (_latitude == null || _longitude == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Please pick your location first',
-                                        ),
-                                      ),
-                                    );
+                                    CustomSnackBar.showError(context, 'Please pick your location first');
                                     return;
                                   }
 
@@ -305,6 +296,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       title1: 'Already have an account? ',
                       Title2: 'Sign In',
                       OnTap: () {
+                        context.read<TextFieldController>().allClear();
+                        context.read<PasswordController>().clearPasswords();
                         Navigator.push(
                           context,
                           MaterialPageRoute(

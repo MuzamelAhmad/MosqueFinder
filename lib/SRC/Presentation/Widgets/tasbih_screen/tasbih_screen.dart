@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mosque_finder/SRC/Data/Resources/App_Strings/app_titles.dart';
+import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
 
 import '../../../Application/Utils/Extensions/padding.dart';
 import '../../Common/common_Icon.dart';
@@ -23,15 +24,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
     if (_counter.value != 0) {
       _counter.value = 0;
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Counter is Already Zero',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      CustomSnackBar.showError(context, 'Counter is Already Zero');
     }
   }
 

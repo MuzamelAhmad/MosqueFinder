@@ -81,3 +81,19 @@ class SinglePrayerTimeUpdateError extends ImamState {
   final String message;
   SinglePrayerTimeUpdateError(this.message);
 }
+
+// ── Profile Update ───────────────────────────
+class ImamProfileUpdateSuccess extends ImamState {}
+
+class ImamProfileUpdateError extends ImamState {
+  final String message;
+  ImamProfileUpdateError(this.message);
+}
+
+// ── Forget Password ──────────────────────────
+class ImamForgetPasswordSuccess extends ImamState {}
+
+class ImamForgetPasswordError extends ImamState {
+  final String message;
+  ImamForgetPasswordError(this.message);
+}

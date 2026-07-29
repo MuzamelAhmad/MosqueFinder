@@ -11,9 +11,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // import 'package:timezone/data/latest.dart' as tz;
 
 import 'SRC/Application/Cubit/Imam/imam_cubit.dart';
+import 'SRC/Application/Services/shared_prefs_service.dart';
+import 'SRC/Application/Services/notification_service.dart';
 import 'SRC/Data/repositories/DI_Services/mosque_DI.dart';
 import 'SRC/Presentation/Common/TextFromField/Controller/text_field_controller.dart';
 import 'SRC/Presentation/Widgets/PrayerTimesScreen/controller/hijri_provider.dart';
+import 'SRC/Presentation/Widgets/ImamScreen/imam_screen.dart';
 
 void main() async {
   await dotenv.load(fileName: '.env');
@@ -22,13 +25,19 @@ void main() async {
     url: dotenv.env['Supabase_url']!,
     anonKey: dotenv.env['Supabase_anon_key']!,
   );
-  // tz.initializeTimeZones(); // ← important!
-  runApp(const MyApp());
+  
+  await NotificationService.init();
+  await NotificationService.requestPermissions();
+
+  final String? savedUserId = await SharedPrefsService.getUserId();
+  
+  runApp(MyApp(initialUserId: savedUserId));
   getIt.registerLazySingleton<MosqueDiServices>(() => MosqueDiServices());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initialUserId;
+  const MyApp({super.key, this.initialUserId});
 
   // This widget is the root of your application.
   @override
@@ -42,7 +51,7 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => TextFieldController()),
         ],
         child: ScreenUtilInit(
-          designSize: const Size(360, 690),
+          designSize: Size(MediaQuery.widthOf(context), MediaQuery.heightOf(context)),
           minTextAdapt: true,
           splitScreenMode: true,
           // Use builder only if you need to use library outside ScreenUtilInit context
@@ -63,7 +72,9 @@ class MyApp extends StatelessWidget {
               //   '/login': (context) => const LoginScreen(),
               //   '/signup': (context) => const SignupScreen(),
               // },
-              home: const SelectionScreen(),
+              home: initialUserId != null
+                  ? ImamScreen(userId: initialUserId!)
+                  : const SelectionScreen(),
             );
           },
         ),

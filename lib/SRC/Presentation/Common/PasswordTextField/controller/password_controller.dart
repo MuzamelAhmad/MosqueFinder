@@ -27,7 +27,13 @@ class PasswordController with ChangeNotifier {
   }
 
   void setConfPassword(TextEditingController confirmPassword) {
-    confirmPassword = confirmPassword;
+    this.confirmPassword = confirmPassword;
+    notifyListeners();
+  }
+
+  void clearPasswords() {
+    password.clear();
+    confirmPassword.clear();
     notifyListeners();
   }
 }

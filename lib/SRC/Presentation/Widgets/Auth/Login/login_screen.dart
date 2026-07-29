@@ -5,6 +5,7 @@ import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
 import 'package:mosque_finder/SRC/Presentation/Common/SocialLoginMethods/social_account_card.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/signup/signup_screen.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/imam_screen.dart';
+import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,6 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
       listener: (context, state) {
         // ── Login Success → go to ImamScreen ───
         if (state is ImamLoginSuccess) {
+          // ✅ Persist login state
+          SharedPrefsService.saveUserId(state.userId);
+
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
@@ -44,9 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
         // ── Login Error ────────────────────────
         if (state is ImamLoginError) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.message)));
+          CustomSnackBar.showError(context, state.message);
         }
       },
       child: Scaffold(
@@ -175,28 +177,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                       if (textController.text.text
                                           .trim()
                                           .isEmpty) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Email is required'),
-                                          ),
-                                        );
+                                        CustomSnackBar.showError(context, 'Email is required');
                                         return;
                                       }
 
                                       if (passwordController.getPassword.text
                                           .trim()
                                           .isEmpty) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Password is required',
-                                            ),
-                                          ),
-                                        );
+                                        CustomSnackBar.showError(context, 'Password is required');
                                         return;
                                       }
 
@@ -226,6 +214,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     title1: 'Don\'t have an account? ',
                     Title2: 'Sign Up',
                     OnTap: () {
+                      context.read<TextFieldController>().allClear();
+                      context.read<PasswordController>().clearPasswords();
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => SignupScreen()),

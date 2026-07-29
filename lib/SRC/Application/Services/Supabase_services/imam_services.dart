@@ -35,6 +35,22 @@ class ImamRepository {
 
     return res;
   }
+
+  // ✅ Check if email exists in ImamData table
+  Future<bool> checkEmailExists(String email) async {
+    try {
+      final res = await _supabase
+          .from('ImamData')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle();
+
+      return res != null;
+    } catch (e) {
+      debugPrint('Check email exists error: $e');
+      return false;
+    }
+  }
   // Future<ImamModel?> getImamData() async {
   //   try {
   //     if (_currentEmail == null) throw Exception('No user logged in');
@@ -167,6 +183,7 @@ class ImamRepository {
       final updated = current.copyWith(
         fajr: prayerKey == 'fajr' ? newTime : null,
         dhuhr: prayerKey == 'dhuhr' ? newTime : null,
+        jumma: prayerKey == 'jumma' ? newTime : null,
         asr: prayerKey == 'asr' ? newTime : null,
         maghrib: prayerKey == 'maghrib' ? newTime : null,
         isha: prayerKey == 'isha' ? newTime : null,

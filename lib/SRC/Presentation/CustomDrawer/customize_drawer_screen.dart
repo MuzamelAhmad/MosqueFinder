@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
+import 'package:mosque_finder/SRC/Data/repositories/ImamModel/imam_model.dart';
+import 'package:mosque_finder/SRC/Presentation/Widgets/ImamProfile/imam_profile.dart';
+import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
+import 'package:mosque_finder/SRC/Presentation/Widgets/Seclection_Screen/selection_screen.dart';
+import 'package:mosque_finder/SRC/Presentation/Widgets/NotificationScreen/notification_screen.dart';
 
 class CustomizeDrawerScreen extends StatelessWidget {
-  const CustomizeDrawerScreen({super.key});
+  final ImamModel imam;
+  const CustomizeDrawerScreen({super.key, required this.imam});
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +27,13 @@ class CustomizeDrawerScreen extends StatelessWidget {
             Material(
               child: InkWell(
                 onTap: () {
-                  /// Close Navigation drawer before
-                  // Navigator.pop(context);
-                  // Navigator.push(context, MaterialPageRoute(builder: (context) => UserProfile()),);
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ImamProfile(),
+                    ),
+                  );
                 },
                 child: Container(
                   decoration: BoxDecoration(
@@ -38,25 +48,21 @@ class CustomizeDrawerScreen extends StatelessWidget {
                     bottom: 24,
                   ),
                   child: Column(
-                    children: const [
-                      CircleAvatar(
-                        radius: 52,
-                        backgroundImage: NetworkImage(
-                          'https://images.unsplash.com/photo-1554151228-14d9def656e4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTB8fHNtaWx5JTIwZmFjZXxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60',
-                          // 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8c21pbHklMjBmYWNlfGVufDB8fDB8fA%3D%3D&auto=format&fit=crop&w=500&q=60'
-                        ),
-                      ),
-                      SizedBox(height: 12),
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
                       Text(
-                        'Sophia',
-                        style: TextStyle(fontSize: 28, color: Colors.white),
+                        imam.imamName,
+                        style: const TextStyle(fontSize: 24, color: Colors.white),
+                        textAlign: TextAlign.center,
                       ),
                       Text(
-                        '@sophia.com',
-                        style: TextStyle(fontSize: 14, color: Colors.white),
+                        imam.email,
+                        style: const TextStyle(fontSize: 14, color: Colors.white70),
                       ),
                     ],
-                  ),
+                  ).paddingAll(10),
                 ),
               ),
             ),
@@ -74,60 +80,73 @@ class CustomizeDrawerScreen extends StatelessWidget {
                 children: [
                   ListTile(
                     leading: Icon(
-                      Icons.home_outlined,
+                      Icons.person,
                       color: theme.colorScheme.onPrimary,
                     ),
-                    title: Text('Home', style: styleMedium),
+                    title: Text('Profile', style: styleMedium),
                     onTap: () {
-                      /// Close Navigation drawer before
-                      // Navigator.pop(context);
-                      // Navigator.push(context, MaterialPageRoute(builder: (context) => HomeScreen()),);
+                      Navigator.pop(context); // Close drawer
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ImamProfile(),
+                        ),
+                      );
                     },
                   ),
                   ListTile(
                     leading: Icon(
-                      Icons.favorite_border,
+                      Icons.policy,
                       color: theme.colorScheme.onPrimary,
                     ),
-                    title: Text('Favourites', style: styleMedium),
+                    title: Text('Terms & Condition', style: styleMedium),
                     onTap: () {
                       /// Close Navigation drawer before
                       // Navigator.pop(context);
                       // Navigator.push(context, MaterialPageRoute(builder: (context) => FavouriteScreen()),);
                     },
                   ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.workspaces,
-                      color: theme.colorScheme.onPrimary,
-                    ),
-                    title: Text('Workflow', style: styleMedium),
-                    onTap: () {},
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.update,
-                      color: theme.colorScheme.onPrimary,
-                    ),
-                    title: Text('Updates', style: styleMedium),
-                    onTap: () {},
-                  ),
                   const Divider(color: Colors.black45),
-                  ListTile(
-                    leading: Icon(
-                      Icons.account_tree_outlined,
-                      color: theme.colorScheme.onPrimary,
-                    ),
-                    title: Text('Plugins', style: styleMedium),
-                    onTap: () {},
-                  ),
                   ListTile(
                     leading: Icon(
                       Icons.notifications_outlined,
                       color: theme.colorScheme.onPrimary,
                     ),
                     title: Text('Notifications', style: styleMedium),
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(color: Colors.black45),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.logout,
+                      color: Colors.redAccent,
+                    ),
+                    title: Text(
+                      'Logout',
+                      style: styleMedium?.copyWith(color: Colors.redAccent),
+                    ),
+                    onTap: () async {
+                      // ✅ Clear persisted session
+                      await SharedPrefsService.removeUserId();
+
+                      if (context.mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SelectionScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
