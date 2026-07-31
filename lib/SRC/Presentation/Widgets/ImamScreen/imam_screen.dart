@@ -20,6 +20,9 @@ class ImamScreen extends StatefulWidget {
 class _ImamScreenState extends State<ImamScreen> {
   // ✅ Cache the last loaded imam to keep UI "sticky" during updates
   ImamModel? _cachedImam;
+  
+  // ✅ Flag to prevent multiple "No Internet" dialogs from stacking
+  bool _isDialogShowing = false;
 
   @override
   void initState() {
@@ -51,6 +54,40 @@ class _ImamScreenState extends State<ImamScreen> {
     }
   }
 
+  void _showNoInternetDialog(BuildContext context, String message) {
+    if (_isDialogShowing) return;
+
+    _isDialogShowing = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.indigo.shade900,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.wifi_off, color: Colors.white),
+            SizedBox(width: 10),
+            Text('No Internet', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _isDialogShowing = false;
+              Navigator.pop(context);
+            },
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ).then((_) => _isDialogShowing = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,7 +98,13 @@ class _ImamScreenState extends State<ImamScreen> {
         if (state is ImamLoaded) {
           _cachedImam = state.imam;
           // ✅ Schedule notifications whenever data is loaded/updated
-          NotificationService.schedulePrayerNotifications(state.imam.prayTime);
+          NotificationService.schedulePrayerNotifications(state.imam.prayTime).then((_) async {
+            if (await NotificationService.isEnabled() && !(await NotificationService.hasPermissions())) {
+              if (mounted) {
+                 CustomSnackBar.showError(context, 'Please enable "Alarms & Reminders" for prayer alerts');
+              }
+            }
+          });
         }
 
         // ── Show Snack bar on error ─────────
@@ -72,6 +115,11 @@ class _ImamScreenState extends State<ImamScreen> {
         // ── Success Feedback ────────────────
         if (state is SinglePrayerTimeUpdateSuccess) {
           CustomSnackBar.showSuccess(context, 'Prayer time updated ✅');
+        }
+
+        // ── Offline Error ───────────────────
+        if (state is ImamNoInternetError) {
+          _showNoInternetDialog(context, state.message);
         }
       },
       builder: (context, state) {

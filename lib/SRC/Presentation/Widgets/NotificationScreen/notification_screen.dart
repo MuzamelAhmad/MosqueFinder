@@ -28,6 +28,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _toggleNotifications(bool value) async {
+    if (value) {
+      // Request permissions if enabling
+      final hasPermission = await NotificationService.requestPermissions();
+      if (!hasPermission) {
+        if (mounted) {
+          CustomSnackBar.showError(
+            context,
+            'Permission denied. Please enable "Alarms & Reminders" in settings.',
+          );
+        }
+        return; // Don't toggle if permission failed
+      }
+    }
+
     await NotificationService.setEnabled(value);
     setState(() {
       _notificationsEnabled = value;

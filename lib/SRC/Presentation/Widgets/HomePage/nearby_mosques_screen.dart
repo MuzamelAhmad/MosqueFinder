@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mosque_finder/SRC/Application/Cubit/Muqtadi/muqtadi_cubit.dart';
 import 'package:mosque_finder/SRC/Application/Utils/Extensions/padding.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/HomePage/components/live_time.dart';
+
+import 'package:mosque_finder/SRC/Application/Utils/connectivity_helper.dart';
 
 import '../PrayerTimesScreen/prayer_times_screen.dart';
 import 'components/LiveLocation/live_location.dart';
@@ -14,112 +19,138 @@ class NearbyMosquesScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          // Header: Time + City + More button
-          SliverToBoxAdapter(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: BlocBuilder<MuqtadiCubit, MuqtadiState>(
+        builder: (context, state) {
+          return CustomScrollView(
+            slivers: [
+              // Header: Time + City + More button
+              SliverToBoxAdapter(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    LiveClock(
-                      style: theme.textTheme.titleMedium!.copyWith(
-                        color: theme.colorScheme.onPrimary,
-                        fontWeight: FontWeight.bold,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LiveClock(
+                          style: theme.textTheme.titleMedium!.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        LiveCityWidget(),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert, color: Colors.white),
+                      onPressed: () {},
+                    ),
+                  ],
+                ).paddingSymmetric(horizontal: 16.w, vertical: 8.h),
+              ),
+              // Title
+              SliverToBoxAdapter(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Nearby Mosques (1 km radius)",
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ).paddingSymmetric(horizontal: 10),
+              ),
+
+              if (state is MuqtadiLoading)
+                const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+
+              if (state is MuqtadiError)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Text(
+                      state.message,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+
+              if (state is MuqtadiLoaded) ...[
+                SliverToBoxAdapter(
+                  child: FutureBuilder<bool>(
+                    future: ConnectivityHelper.hasInternet(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data == false) {
+                        return Container(
+                          margin: EdgeInsets.all(10.w),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child:  Row(
+                            children: [
+                              Icon(Icons.cloud_off, color: Colors.orange, size: 20.r),
+                              SizedBox(width: 10.w),
+                              Text(
+                                "Offline: Showing last known mosques",
+                                style: TextStyle(color: Colors.orange, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+                if (state.mosques.isEmpty)
+                  const SliverFillRemaining(
+                    child: Center(
+                      child: Text(
+                        "No mosques found within 1 km.",
+                        style: TextStyle(color: Colors.white70),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    LiveCityWidget(),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_vert, color: Colors.white),
-                  onPressed: () {},
-                ),
-              ],
-            ).paddingSymmetric(horizontal: 16, vertical: 8),
-          ),
-          // Title
-          SliverToBoxAdapter(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Nearby Mosques",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ).paddingSymmetric(horizontal: 10),
-          ),
+                  )
+                else
+                  SliverList.builder(
+                    itemCount: state.mosques.length,
+                    itemBuilder: (context, index) {
+                      final mosque = state.mosques[index];
+                      final prayerTimes = mosque['Praytime'];
+                      final double distance = mosque['distance_meters'];
 
-          // Mosque list
-          SliverList(
-            delegate: SliverChildListDelegate([
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PrayerTimesScreen(),
-                    ),
-                  );
-                },
-                child: const MosqueCard(
-                  name: "Faisal Mosque",
-                  distance: "2.5 km",
-                  fajrTime: "4:45 AM",
-                  distanceSmall: "500 m",
-                  isNext: true,
-                  verified: false,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const MosqueCard(
-                name: "Grand Jamia Masid",
-                distance: "500 m",
-                fajrTime: "4:45 AM",
-                dhuhrTime: "1:30 PM",
-                asrTime: "4:30 PM",
-                ishaTime: "8:00 PM",
-                currentPrayer: "Asr",
-                verified: false,
-              ),
-              const SizedBox(height: 12),
-              const MosqueCard(
-                name: "Grand Jamia Masid",
-                distance: null,
-                fajrTime: "4:30 AM",
-                dhuhrTime: "1:30 PM (Jama'at)",
-                asrTime: "4:15 PM",
-                ishaTime: "8:35 PM",
-                currentPrayer: "Asr",
-                verified: true,
-              ),
-              const SizedBox(height: 12),
-              const MosqueCard(
-                name: "Badashi Mosque",
-                distance: null,
-                asrTime: "4:15 PM",
-                ishaTime: "8:00 PM",
-                currentPrayer: "Isha",
-                verified: true,
-              ),
-              const SizedBox(height: 12),
-              const MosqueCard(
-                name: "Fajr Mosque", // probably typo in screenshot
-                distance: null,
-                fajrTime: "4:45 AM",
-                ishaTime: "8:00 PM",
-                verified: true,
-              ),
-              const SizedBox(height: 80), // space for bottom nav
-            ]),
-          ),
-        ],
+                      return InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PrayerTimesScreen(mosqueData: mosque),
+                            ),
+                          );
+                        },
+                        child: MosqueCard(
+                          name: mosque['mosque name'] ?? 'Unknown Mosque',
+                          distance: "${distance.toStringAsFixed(0)} meters",
+                          fajrTime: prayerTimes?['fajr'],
+                          dhuhrTime: prayerTimes?['dhuhr'],
+                          asrTime: prayerTimes?['asr'],
+                          ishaTime: prayerTimes?['isha'],
+                          verified: true,
+                        ).paddingOnly(bottom: 12),
+                      );
+                    },
+                  ),
+              ],
+              
+              SliverToBoxAdapter(child: SizedBox(height: 80.h)),
+            ],
+          );
+        },
       ),
     );
   }

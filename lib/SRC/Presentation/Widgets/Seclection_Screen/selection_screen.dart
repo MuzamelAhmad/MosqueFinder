@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mosque_finder/SRC/Application/Cubit/Muqtadi/muqtadi_cubit.dart';
 import 'package:mosque_finder/SRC/Application/Utils/Extensions/padding.dart';
 import 'package:mosque_finder/SRC/Data/Resources/App_Paths/paths.dart';
 import 'package:mosque_finder/SRC/Data/Resources/colors/app_colors.dart';
@@ -16,9 +18,10 @@ class SelectionScreen extends StatefulWidget {
 
 class _SelectionScreenState extends State<SelectionScreen> {
   void Function()? muqtadi() {
+    context.read<MuqtadiCubit>().fetchNearbyMosques();
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => BottomNavigationScreen()),
+      MaterialPageRoute(builder: (context) => const BottomNavigationScreen()),
     );
     return null;
   }
@@ -55,10 +58,10 @@ class _SelectionScreenState extends State<SelectionScreen> {
                 iConData: AppPath.muqtadi,
                 Ontap: muqtadi,
               ),
-              SizedBox(width: 10.w),
+              SizedBox(width: 5.w),
               SelectionCard(title: 'Imam', iConData: AppPath.imam, Ontap: imam),
             ],
-          ).paddingAll(10),
+          ).paddingAll(15.r),
         ),
       ),
     );

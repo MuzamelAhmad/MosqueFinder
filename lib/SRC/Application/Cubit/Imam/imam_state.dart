@@ -97,3 +97,17 @@ class ImamForgetPasswordError extends ImamState {
   final String message;
   ImamForgetPasswordError(this.message);
 }
+
+// ── Password Update ──────────────────────────
+class ImamPasswordUpdateSuccess extends ImamState {}
+
+class ImamPasswordUpdateError extends ImamState {
+  final String message;
+  ImamPasswordUpdateError(this.message);
+}
+
+// ── Offline ──────────────────────────────────
+class ImamNoInternetError extends ImamState {
+  final String message;
+  ImamNoInternetError(this.message);
+}

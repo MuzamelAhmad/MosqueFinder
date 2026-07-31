@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
 import 'package:mosque_finder/SRC/Data/Resources/App_Strings/app_titles.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
 
@@ -16,16 +18,128 @@ class TasbihScreen extends StatefulWidget {
 class _TasbihScreenState extends State<TasbihScreen> {
   final ValueNotifier<int> _counter = ValueNotifier(0);
 
-  void _incrementCounter() {
-    _counter.value++;
+  @override
+  void initState() {
+    super.initState();
+    _loadCounter();
   }
 
-  void restCounter() {
+  Future<void> _loadCounter() async {
+    final count = await SharedPrefsService.getTasbihCount();
+    _counter.value = count;
+  }
+
+  void _incrementCounter() {
+    _counter.value++;
+    SharedPrefsService.saveTasbihCount(_counter.value);
+  }
+
+  Future<void> restCounter() async {
     if (_counter.value != 0) {
+      // ✅ Save to history before resetting
+      await SharedPrefsService.addToTasbihHistory(_counter.value);
+      
       _counter.value = 0;
+      await SharedPrefsService.saveTasbihCount(0);
+      
+      if (mounted) {
+        CustomSnackBar.showSuccess(context, 'Count saved to history and reset ✅');
+      }
     } else {
       CustomSnackBar.showError(context, 'Counter is Already Zero');
     }
+  }
+
+  void _showHistorySheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: Colors.indigo.shade900,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: EdgeInsets.all(20.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Tasbeeh History',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                    onPressed: () async {
+                      await SharedPrefsService.clearTasbihHistory();
+                      if (mounted) Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white24, height: 1),
+            
+            // List
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: SharedPrefsService.getTasbihHistory(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final history = snapshot.data ?? [];
+                  if (history.isEmpty) {
+                    return const Center(
+                      child: Text('No history yet', style: TextStyle(color: Colors.white70)),
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    itemCount: history.length,
+                    itemBuilder: (context, index) {
+                      final item = history[index];
+                      final count = item['count'];
+                      final date = DateTime.parse(item['date']);
+                      final formattedDate = DateFormat('dd MMM yyyy, hh:mm a').format(date);
+                      
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.white.withOpacity(0.1),
+                          child: Text(
+                            count.toString(),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        title: Text(
+                          'Session Completed',
+                          style: TextStyle(color: Colors.white, fontSize: 16.sp),
+                        ),
+                        subtitle: Text(
+                          formattedDate,
+                          style: TextStyle(color: Colors.white60, fontSize: 12.sp),
+                        ),
+                        trailing: const Icon(Icons.check_circle_outline, color: Colors.green),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -41,7 +155,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
             backgroundColor: Colors.transparent,
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
-              title: Expanded(
+              title: Padding(
+                padding: const EdgeInsets.only(bottom: 18),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -50,10 +165,11 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       bgColor: theme.colorScheme.surface.withAlpha(
                         (255 * 0.1).toInt(),
                       ),
+                      onTap: () => Navigator.pop(context),
                     ),
                     Text(
                       AppTitles.tasbih,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14.0,
                         fontWeight: FontWeight.bold,
@@ -65,18 +181,19 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       bgColor: theme.colorScheme.surface.withAlpha(
                         (255 * 0.1).toInt(),
                       ),
+                      onTap: _showHistorySheet,
                     ),
                   ],
                 ).paddingAll(8.0),
               ),
-              titlePadding: EdgeInsets.only(bottom: 18),
+              titlePadding: EdgeInsets.zero,
             ),
           ),
           SliverToBoxAdapter(
             child: Container(
               height: 120,
-              decoration: BoxDecoration(color: Colors.transparent),
-              child: WierdCard(),
+              decoration: const BoxDecoration(color: Colors.transparent),
+              child: const WierdCard(),
             ).paddingAll(20),
           ),
           SliverToBoxAdapter(
@@ -116,7 +233,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                         ),
                       ],
                       shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                      borderRadius: const BorderRadius.all(Radius.circular(20)),
                       // color: theme.colorScheme.surface.withAlpha(
                       //   (255 * 0.9).toInt(),
                       // ),
@@ -178,7 +295,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                     width: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                      borderRadius: const BorderRadius.all(Radius.circular(10)),
                       color: theme.colorScheme.primary,
                       boxShadow: [
                         BoxShadow(

@@ -15,7 +15,7 @@ class NotificationService {
   // ✅ Initialize
   static Future<void> init() async {
     tz.initializeTimeZones();
-    
+
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -26,16 +26,34 @@ class NotificationService {
   }
 
   // ✅ Request Permissions
-  static Future<void> requestPermissions() async {
-    await _notificationsPlugin
+  static Future<bool> requestPermissions() async {
+    final androidPlugin = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-    
-    await _notificationsPlugin
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin == null) return false;
+
+    // Request standard notification permission
+    final bool? granted = await androidPlugin.requestNotificationsPermission();
+
+    // Request exact alarm permission (Android 12+)
+    final bool? exactGranted =
+        await androidPlugin.requestExactAlarmsPermission();
+
+    return (granted ?? false) && (exactGranted ?? false);
+  }
+
+  // ✅ Check if permissions are granted
+  static Future<bool> hasPermissions() async {
+    final androidPlugin = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestExactAlarmsPermission();
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin == null) return false;
+
+    final bool? canSchedule =
+        await androidPlugin.canScheduleExactNotifications();
+    return canSchedule ?? false;
   }
 
   // ✅ Check if enabled
@@ -51,15 +69,29 @@ class NotificationService {
   }
 
   // ✅ Schedule all prayer notifications
-  static Future<void> schedulePrayerNotifications(PrayerTimesModel? times) async {
+  static Future<void> schedulePrayerNotifications(
+      PrayerTimesModel? times) async {
     // 1. Clear existing
     await _notificationsPlugin.cancelAll();
 
-    if (times == null) return;
-    if (!(await isEnabled())) return;
+    if (times == null) {
+      debugPrint('NOTIF: No times provided to schedule');
+      return;
+    }
+    if (!(await isEnabled())) {
+      debugPrint('NOTIF: Notifications are disabled by user');
+      return;
+    }
+
+    // Check permissions before scheduling
+    if (!(await hasPermissions())) {
+      debugPrint('NOTIF: Cannot schedule because permissions are missing');
+      return;
+    }
+
+    debugPrint('NOTIF: Scheduling new alerts...');
 
     // 2. Schedule each prayer
-    // Fajr, Asr, Maghrib, Isha are daily
     _scheduleDaily(1, 'Fajr', times.fajr);
     _scheduleDaily(4, 'Asr', times.asr);
     _scheduleDaily(5, 'Maghrib', times.maghrib);
@@ -84,6 +116,8 @@ class NotificationService {
 
     final scheduleTime = _getScheduleTime(timeStr);
     if (scheduleTime == null) return;
+
+    debugPrint('NOTIF: Scheduled $name for $scheduleTime (Daily)');
 
     await _notificationsPlugin.zonedSchedule(
       id,
@@ -114,7 +148,9 @@ class NotificationService {
 
     for (int day in days) {
       final scheduledDate = _nextInstanceOfDay(baseTime, day);
-      
+
+      debugPrint('NOTIF: Scheduled $name for $scheduledDate (Day ID: $day)');
+
       await _notificationsPlugin.zonedSchedule(
         id * 10 + day, // Unique ID for each day
         'Prayer Reminder',
@@ -140,7 +176,7 @@ class NotificationService {
     try {
       final dt = DateFormat('h:mm a').parse(timeStr);
       final now = tz.TZDateTime.now(tz.local);
-      
+
       var scheduleTime = tz.TZDateTime(
         tz.local,
         now.year,
@@ -150,8 +186,14 @@ class NotificationService {
         dt.minute,
       ).subtract(const Duration(minutes: 5)); // 5 minutes before
 
+      // ✅ If the scheduled time is in the past (already happened today), move to tomorrow
+      if (scheduleTime.isBefore(now)) {
+        scheduleTime = scheduleTime.add(const Duration(days: 1));
+      }
+
       return scheduleTime;
     } catch (e) {
+      debugPrint('NOTIF: Error parsing time $timeStr -> $e');
       return null;
     }
   }
@@ -159,6 +201,10 @@ class NotificationService {
   static tz.TZDateTime _nextInstanceOfDay(tz.TZDateTime scheduledDate, int day) {
     while (scheduledDate.weekday != day) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+    // Safety check for dayOfWeekAndTime: if the final calculated time is in the past, add a week
+    if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
+      scheduledDate = scheduledDate.add(const Duration(days: 7));
     }
     return scheduledDate;
   }

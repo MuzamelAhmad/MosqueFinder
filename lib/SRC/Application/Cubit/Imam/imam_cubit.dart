@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:mosque_finder/SRC/Application/Services/Supabase_services/imam_services.dart';
+import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
+import 'package:mosque_finder/SRC/Application/Utils/connectivity_helper.dart';
 import 'package:mosque_finder/SRC/Data/repositories/ImamModel/imam_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -152,15 +154,38 @@ class ImamCubit extends Cubit<ImamState> {
         return;
       }
 
+      // Check internet first
+      final isOnline = await ConnectivityHelper.hasInternet();
+
+      if (!isOnline) {
+        final cached = await SharedPrefsService.getCachedImamData();
+        if (cached != null) {
+          emit(ImamLoaded(cached));
+          return;
+        } else {
+          emit(ImamError('No internet connection and no cached data found.'));
+          return;
+        }
+      }
+
       final imam = await _repo.getImamDataByUserId(user.id);
       print('Raw response: $imam');
       if (imam != null) {
-        emit(ImamLoaded(ImamModel.fromJson(imam)));
+        final imamModel = ImamModel.fromJson(imam);
+        // ✅ Update cache
+        await SharedPrefsService.cacheImamData(imamModel);
+        emit(ImamLoaded(imamModel));
       } else {
         emit(ImamError('No data found'));
       }
     } catch (e) {
-      emit(ImamError('Fetch error: $e'));
+      // Try cache on failure
+      final cached = await SharedPrefsService.getCachedImamData();
+      if (cached != null) {
+        emit(ImamLoaded(cached));
+      } else {
+        emit(ImamError('Fetch error: $e'));
+      }
     }
   }
 
@@ -188,6 +213,12 @@ class ImamCubit extends Cubit<ImamState> {
     required String prayerKey,
     required String newTime,
   }) async {
+    // 1. Check internet before trying to update server
+    if (!(await ConnectivityHelper.hasInternet())) {
+      emit(ImamNoInternetError('Cannot update prayer times while offline.'));
+      return;
+    }
+
     emit(ImamLoading());
     try {
       final success = await _repo.updateSinglePrayerTime(
@@ -248,6 +279,11 @@ class ImamCubit extends Cubit<ImamState> {
     required String mosqueName,
     required String city,
   }) async {
+    if (!(await ConnectivityHelper.hasInternet())) {
+      emit(ImamNoInternetError('Cannot update profile while offline.'));
+      return;
+    }
+
     emit(ImamLoading());
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -308,6 +344,23 @@ class ImamCubit extends Cubit<ImamState> {
       emit(ImamForgetPasswordError(e.message));
     } catch (e) {
       emit(ImamForgetPasswordError('Error: $e'));
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //             Update Password
+  // ═══════════════════════════════════════════
+  Future<void> updatePassword({required String newPassword}) async {
+    emit(ImamLoading());
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      emit(ImamPasswordUpdateSuccess());
+    } on AuthException catch (e) {
+      emit(ImamPasswordUpdateError(e.message));
+    } catch (e) {
+      emit(ImamPasswordUpdateError('Error: $e'));
     }
   }
 

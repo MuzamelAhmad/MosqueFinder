@@ -23,7 +23,7 @@ class SelectionCard extends StatelessWidget {
           color: Colors.black12,
           borderRadius: BorderRadius.circular(20),
         ),
-        padding: EdgeInsets.all(20),
+        padding: EdgeInsets.all(10.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -32,7 +32,7 @@ class SelectionCard extends StatelessWidget {
               height: 100.h,
               width: 100.w,
               decoration: BoxDecoration(
-                color: Colors.grey,
+                color: Colors.indigo,
                 shape: BoxShape.circle,
                 image: DecorationImage(image: AssetImage(iConData)),
               ),

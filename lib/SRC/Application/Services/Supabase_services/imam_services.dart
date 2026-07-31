@@ -36,6 +36,19 @@ class ImamRepository {
     return res;
   }
 
+  // ✅ Fetch ALL mosques for Muqtadi
+  Future<List<Map<String, dynamic>>> getAllMosques() async {
+    try {
+      final res = await _supabase
+          .from('ImamData')
+          .select();
+      return List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      debugPrint('Fetch all mosques error: $e');
+      return [];
+    }
+  }
+
   // ✅ Check if email exists in ImamData table
   Future<bool> checkEmailExists(String email) async {
     try {

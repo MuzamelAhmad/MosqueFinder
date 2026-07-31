@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/PrayerTimesScreen/controller/hijri_provider.dart';
 import 'package:provider/provider.dart';
 
 class PrayerTimesScreen extends StatefulWidget {
-  const PrayerTimesScreen({super.key});
+  final Map<String, dynamic>? mosqueData;
+  const PrayerTimesScreen({super.key, this.mosqueData});
 
   @override
   State<PrayerTimesScreen> createState() => _PrayerTimesScreenState();
@@ -15,116 +15,92 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
   String gregorianDate = "Fetching...";
   String? nextPrayerName;
   String? nextPrayerTimeStr;
-  Map<String, String> prayerDisplayTimes = {
-    'Fajr': '5:50',
-    'Sunrise': '6:00',
-    'Dhuhr': '12:30',
-    'Asr': '4:30',
-    'Maghrib': '6:30',
-    'Isha': '8:00',
-  }; // name → formatted time (jamaah or prayer)
+  Map<String, String> prayerDisplayTimes = {};
   bool isLoading = true;
-  String? errorMessage;
 
   @override
   void initState() {
     super.initState();
     gregorianDate = DateFormat('dd MMMM yyyy').format(DateTime.now());
     Provider.of<HijriProvider>(context, listen: false).fetchHijriDate();
-    _loadPrayerTimes();
+    _initializePrayerTimes();
   }
 
-  // String tzName = tz.local.name; // e.g. "Asia/Karachi" on your device
-  Future<void> _loadPrayerTimes() async {
-    try {
-      // Get current location
-      final position = await _getLocation();
-
-      // Calculate prayer times using prayers_times package
-      String _getCurrentNextPrayer() {
-        final now = DateTime.now();
-        final formatter = DateFormat('hh:mm a');
-
-        final times = {
-          'Fajr': formatter.parse('05:11 AM'),
-          'Dhuhr': formatter.parse('12:25 PM'),
-          'Asr': formatter.parse('04:35 PM'),
-          'Maghrib': formatter.parse('06:16 PM'),
-          'Isha': formatter.parse('07:39 PM'),
+  void _initializePrayerTimes() {
+    if (widget.mosqueData != null && widget.mosqueData!['Praytime'] != null) {
+      final times = widget.mosqueData!['Praytime'] as Map<String, dynamic>;
+      setState(() {
+        prayerDisplayTimes = {
+          'Fajr': times['fajr'] ?? '--:--',
+          'Dhuhr': times['dhuhr'] ?? '--:--',
+          'Jumma': times['jumma'] ?? '--:--',
+          'Asr': times['asr'] ?? '--:--',
+          'Maghrib': times['maghrib'] ?? '--:--',
+          'Isha': times['isha'] ?? '--:--',
         };
-
-        for (var entry in times.entries) {
-          final prayerTime = entry.value;
-          if (now.isBefore(
-            prayerTime.copyWith(year: now.year, month: now.month, day: now.day),
-          )) {
-            return entry.key;
-          }
-        }
-        return 'Fajr (tomorrow)';
-      }
-
-      // Find next prayer
-      String upcoming = 'Fajr (Tomorrow)';
-
-      if (mounted) {
-        setState(() {
-          nextPrayerName = _getCurrentNextPrayer();
-          nextPrayerTimeStr = prayerDisplayTimes[nextPrayerName];
-          upcoming;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      String msg = "Error loading prayer times";
-      if (e.toString().contains("denied")) {
-        msg = "Location permission denied.\nPlease enable location.";
-      } else if (e.toString().contains("disabled")) {
-        msg = "Location services are disabled.\nPlease turn them on.";
-      } else {
-        msg = "Error: ${e.toString()}";
-      }
-
-      if (mounted) {
-        setState(() {
-          errorMessage = msg;
-          isLoading = false;
-        });
-      }
+        _calculateNextPrayer();
+        isLoading = false;
+      });
+    } else {
+      // Fallback for direct navigation if needed
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  Future<Position> _getLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception("Location services are disabled.");
-    }
+  void _calculateNextPrayer() {
+    final now = DateTime.now();
+    final formatter = DateFormat('h:mm a');
+    String? upcomingName;
+    String? upcomingTime;
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        throw Exception("Location permission denied");
+    // Filter out keys like 'Jumma' for calculation if it's not Friday, 
+    // or handle appropriately. For simplicity, we check all.
+    for (var entry in prayerDisplayTimes.entries) {
+      if (entry.value == '--:--') continue;
+
+      try {
+        final prayerTime = formatter.parse(entry.value);
+        final prayerDateTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          prayerTime.hour,
+          prayerTime.minute,
+        );
+
+        if (now.isBefore(prayerDateTime)) {
+          upcomingName = entry.key;
+          upcomingTime = entry.value;
+          break;
+        }
+      } catch (e) {
+        continue;
       }
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      throw Exception("Location permissions are permanently denied");
-    }
-
-    return await Geolocator.getCurrentPosition(
-      locationSettings: LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 100,
-      ),
-    );
+    setState(() {
+      nextPrayerName = upcomingName ?? 'Fajr (Tomorrow)';
+      nextPrayerTimeStr = upcomingTime ?? prayerDisplayTimes['Fajr'];
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final mosqueName = widget.mosqueData?['mosque name'] ?? 'Prayer Times';
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -135,35 +111,19 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
         ),
         child: SafeArea(
           child: isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
-              : errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Text(
-                      errorMessage!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
+              ? const Center(child: CircularProgressIndicator(color: Colors.white))
               : Column(
                   children: [
                     // Header
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 30),
                       child: Column(
                         children: [
                           Text(
-                            'Prayer Times',
-                            style: theme.textTheme.labelLarge?.copyWith(
+                            mosqueName,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.headlineSmall?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
@@ -198,17 +158,17 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                               children: [
                                 Text(
                                   nextPrayerTimeStr ?? '—',
-                                  style: theme.textTheme.headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFF1A237E),
-                                      ),
+                                  style: theme.textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF1A237E),
+                                  ),
                                 ),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 4),
                                 Text(
-                                  nextPrayerName ?? 'Upcoming',
-                                  style: theme.textTheme.titleMedium?.copyWith(
+                                  nextPrayerName ?? 'Next Prayer',
+                                  style: theme.textTheme.labelLarge?.copyWith(
                                     color: Colors.grey[800],
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
@@ -217,9 +177,9 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
-                    // Prayer List – shows jamaah times
+                    // Prayer List
                     Expanded(
                       child: ListView(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -259,9 +219,7 @@ class PrayerTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       decoration: BoxDecoration(
-        color: isActive
-            ? const Color(0xFF283593)
-            : Colors.white.withOpacity(0.95),
+        color: isActive ? const Color(0xFF283593) : Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -277,20 +235,20 @@ class PrayerTile extends StatelessWidget {
           Text(
             name,
             style: Theme.of(context).textTheme.labelLarge!.copyWith(
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-              color: isActive
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.onSurface,
-            ),
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                  color: isActive
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
           ),
           Text(
             time,
             style: Theme.of(context).textTheme.labelLarge!.copyWith(
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-              color: isActive
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.primary,
-            ),
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                  color: isActive
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.primary,
+                ),
           ),
         ],
       ),
