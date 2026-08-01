@@ -6,13 +6,32 @@ import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart
 import 'package:mosque_finder/SRC/Application/Utils/connectivity_helper.dart';
 import 'package:mosque_finder/SRC/Data/repositories/ImamModel/imam_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 
 part 'imam_state.dart';
 
 class ImamCubit extends Cubit<ImamState> {
   final ImamRepository _repo = ImamRepository();
+  Timer? _refreshTimer;
 
-  ImamCubit() : super(ImamInitial());
+  ImamCubit() : super(ImamInitial()) {
+    _startAutoRefresh();
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
+      if (await ConnectivityHelper.hasInternet()) {
+        getImamData(showLoading: false);
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _refreshTimer?.cancel();
+    return super.close();
+  }
 
   // ═══════════════════════════════════════════
   //            Pick Location
@@ -145,6 +164,14 @@ class ImamCubit extends Cubit<ImamState> {
   //           Fetch Imam Data
   // ════════════════════════════════════
   Future<void> getImamData({bool showLoading = true}) async {
+    // ✅ 1. Try to load and emit cached data IMMEDIATELY
+    final cached = await SharedPrefsService.getCachedImamData();
+    if (cached != null) {
+      emit(ImamLoaded(cached));
+      // If we already showed cached, maybe don't show full-screen loading for background refresh
+      showLoading = false;
+    }
+
     if (showLoading) emit(ImamLoading());
 
     try {
@@ -154,38 +181,27 @@ class ImamCubit extends Cubit<ImamState> {
         return;
       }
 
-      // Check internet first
+      // Check internet for live fetch
       final isOnline = await ConnectivityHelper.hasInternet();
 
       if (!isOnline) {
-        final cached = await SharedPrefsService.getCachedImamData();
-        if (cached != null) {
-          emit(ImamLoaded(cached));
-          return;
-        } else {
+        if (cached == null) {
           emit(ImamError('No internet connection and no cached data found.'));
-          return;
         }
+        return; // Already emitted cached if it exists
       }
 
       final imam = await _repo.getImamDataByUserId(user.id);
-      print('Raw response: $imam');
       if (imam != null) {
         final imamModel = ImamModel.fromJson(imam);
         // ✅ Update cache
         await SharedPrefsService.cacheImamData(imamModel);
         emit(ImamLoaded(imamModel));
       } else {
-        emit(ImamError('No data found'));
+        if (cached == null) emit(ImamError('No data found'));
       }
     } catch (e) {
-      // Try cache on failure
-      final cached = await SharedPrefsService.getCachedImamData();
-      if (cached != null) {
-        emit(ImamLoaded(cached));
-      } else {
-        emit(ImamError('Fetch error: $e'));
-      }
+      if (cached == null) emit(ImamError('Fetch error: $e'));
     }
   }
 

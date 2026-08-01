@@ -3,13 +3,32 @@ import 'package:geolocator/geolocator.dart';
 import 'package:mosque_finder/SRC/Application/Services/Supabase_services/imam_services.dart';
 import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
 import 'package:mosque_finder/SRC/Application/Utils/connectivity_helper.dart';
+import 'dart:async';
 
 part 'muqtadi_state.dart';
 
 class MuqtadiCubit extends Cubit<MuqtadiState> {
   final ImamRepository _repo = ImamRepository();
+  Timer? _refreshTimer;
 
-  MuqtadiCubit() : super(MuqtadiInitial());
+  MuqtadiCubit() : super(MuqtadiInitial()) {
+    _startAutoRefresh();
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
+      if (await ConnectivityHelper.hasInternet()) {
+        fetchNearbyMosques();
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _refreshTimer?.cancel();
+    return super.close();
+  }
 
   Future<void> fetchNearbyMosques() async {
     emit(MuqtadiLoading());
@@ -26,9 +45,14 @@ class MuqtadiCubit extends Cubit<MuqtadiState> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          emit(MuqtadiError('Location permission denied.'));
+          emit(MuqtadiError('Location permission denied. Please enable it in settings.'));
           return;
         }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        emit(MuqtadiError('Location permissions are permanently denied. Please enable them in settings.'));
+        return;
       }
 
       final Position userPos = await Geolocator.getCurrentPosition();
@@ -91,7 +115,16 @@ class MuqtadiCubit extends Cubit<MuqtadiState> {
         userLng: userPos.longitude,
       ));
     } catch (e) {
-      emit(MuqtadiError('Failed to load nearby mosques: $e'));
+      String userFriendlyMessage = 'Something went wrong. Please refresh.';
+      if (e.toString().contains('Location services')) {
+        userFriendlyMessage = 'Location services are disabled. Please turn them on in settings.';
+      } else if (e.toString().contains('permission denied')) {
+        userFriendlyMessage = 'Location permission is required to find mosques near you.';
+      } else if (e.toString().contains('SocketException') || e.toString().contains('Network')) {
+        userFriendlyMessage = 'Unable to connect to the internet. Showing cached data.';
+      }
+      
+      emit(MuqtadiError(userFriendlyMessage));
     }
   }
 }

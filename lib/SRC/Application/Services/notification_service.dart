@@ -22,14 +22,33 @@ class NotificationService {
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
 
-    await _notificationsPlugin.initialize(initializationSettings);
+    await _notificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (details) {
+        // Handle tapping on notification if needed
+      },
+    );
+
+    // Create a high-priority channel for Android
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'prayer_reminders_high',
+      'Prayer Reminders',
+      description: 'Provides timely alerts before prayer starting.',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
   }
 
   // ✅ Request Permissions
   static Future<bool> requestPermissions() async {
     final androidPlugin = _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidPlugin == null) return false;
 
@@ -37,8 +56,7 @@ class NotificationService {
     final bool? granted = await androidPlugin.requestNotificationsPermission();
 
     // Request exact alarm permission (Android 12+)
-    final bool? exactGranted =
-        await androidPlugin.requestExactAlarmsPermission();
+    final bool? exactGranted = await androidPlugin.requestExactAlarmsPermission();
 
     return (granted ?? false) && (exactGranted ?? false);
   }
@@ -46,13 +64,11 @@ class NotificationService {
   // ✅ Check if permissions are granted
   static Future<bool> hasPermissions() async {
     final androidPlugin = _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidPlugin == null) return false;
 
-    final bool? canSchedule =
-        await androidPlugin.canScheduleExactNotifications();
+    final bool? canSchedule = await androidPlugin.canScheduleExactNotifications();
     return canSchedule ?? false;
   }
 
@@ -69,8 +85,7 @@ class NotificationService {
   }
 
   // ✅ Schedule all prayer notifications
-  static Future<void> schedulePrayerNotifications(
-      PrayerTimesModel? times) async {
+  static Future<void> schedulePrayerNotifications(PrayerTimesModel? times) async {
     // 1. Clear existing
     await _notificationsPlugin.cancelAll();
 
@@ -89,7 +104,7 @@ class NotificationService {
       return;
     }
 
-    debugPrint('NOTIF: Scheduling new alerts...');
+    debugPrint('NOTIF: Scheduling high-priority alerts...');
 
     // 2. Schedule each prayer
     _scheduleDaily(1, 'Fajr', times.fajr);
@@ -97,7 +112,7 @@ class NotificationService {
     _scheduleDaily(5, 'Maghrib', times.maghrib);
     _scheduleDaily(6, 'Isha', times.isha);
 
-    // Dhuhr: Mon-Thu, Sat, Sun
+    // Dhuhr: Sat-Thu
     _scheduleSpecificDays(2, 'Dhuhr', times.dhuhr, [
       DateTime.monday,
       DateTime.tuesday,
@@ -117,30 +132,35 @@ class NotificationService {
     final scheduleTime = _getScheduleTime(timeStr);
     if (scheduleTime == null) return;
 
-    debugPrint('NOTIF: Scheduled $name for $scheduleTime (Daily)');
+    debugPrint('NOTIF: Scheduled $name for $scheduleTime (Daily High Priority)');
 
     await _notificationsPlugin.zonedSchedule(
       id,
       'Prayer Reminder',
-      '$name prayer will start in 5 minutes',
+      '$name prayer starts in 5 minutes. Join the community.',
       scheduleTime,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
-          'prayer_reminders',
+          'prayer_reminders_high',
           'Prayer Reminders',
           importance: Importance.max,
-          priority: Priority.high,
+          priority: Priority.max,
+          fullScreenIntent: true,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+          category: AndroidNotificationCategory.alarm,
+          visibility: NotificationVisibility.public,
+          ongoing: false,
+          enableVibration: true,
+          playSound: true,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
-  static Future<void> _scheduleSpecificDays(
-      int id, String name, String timeStr, List<int> days) async {
+  static Future<void> _scheduleSpecificDays(int id, String name, String timeStr, List<int> days) async {
     if (timeStr == '--:--') return;
 
     final baseTime = _getScheduleTime(timeStr);
@@ -149,24 +169,27 @@ class NotificationService {
     for (int day in days) {
       final scheduledDate = _nextInstanceOfDay(baseTime, day);
 
-      debugPrint('NOTIF: Scheduled $name for $scheduledDate (Day ID: $day)');
+      debugPrint('NOTIF: Scheduled $name for $scheduledDate (Weekly ID: $day)');
 
       await _notificationsPlugin.zonedSchedule(
         id * 10 + day, // Unique ID for each day
         'Prayer Reminder',
-        '$name prayer will start in 5 minutes',
+        '$name prayer starts in 5 minutes. Ready for Jama\'at?',
         scheduledDate,
         const NotificationDetails(
           android: AndroidNotificationDetails(
-            'prayer_reminders',
+            'prayer_reminders_high',
             'Prayer Reminders',
             importance: Importance.max,
-            priority: Priority.high,
+            priority: Priority.max,
+            fullScreenIntent: true,
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+            category: AndroidNotificationCategory.alarm,
+          visibility: NotificationVisibility.public,
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
     }
@@ -186,7 +209,7 @@ class NotificationService {
         dt.minute,
       ).subtract(const Duration(minutes: 5)); // 5 minutes before
 
-      // ✅ If the scheduled time is in the past (already happened today), move to tomorrow
+      // If the 5-min alert time has already passed today, set it for tomorrow
       if (scheduleTime.isBefore(now)) {
         scheduleTime = scheduleTime.add(const Duration(days: 1));
       }
@@ -202,7 +225,7 @@ class NotificationService {
     while (scheduledDate.weekday != day) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
-    // Safety check for dayOfWeekAndTime: if the final calculated time is in the past, add a week
+    // Final check for past calculation
     if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) {
       scheduledDate = scheduledDate.add(const Duration(days: 7));
     }

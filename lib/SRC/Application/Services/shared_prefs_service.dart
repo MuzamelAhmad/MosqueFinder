@@ -6,6 +6,7 @@ class SharedPrefsService {
   static const String _userIdKey = 'user_id';
   static const String _imamDataKey = 'imam_data';
   static const String _mosquesDataKey = 'mosques_data';
+  static const String _termsAcceptedKey = 'terms_accepted';
 
   // ✅ Save User ID
   static Future<void> saveUserId(String userId) async {
@@ -109,5 +110,19 @@ class SharedPrefsService {
   static Future<void> clearTasbihHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tasbihHistoryKey);
+  }
+
+  // ═══════════════════════════════════════════
+  //             Terms & Agreement
+  // ═══════════════════════════════════════════
+
+  static Future<void> acceptTerms() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_termsAcceptedKey, true);
+  }
+
+  static Future<bool> hasAcceptedTerms() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_termsAcceptedKey) ?? false;
   }
 }

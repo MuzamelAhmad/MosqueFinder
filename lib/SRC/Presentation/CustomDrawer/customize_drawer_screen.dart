@@ -5,6 +5,7 @@ import 'package:mosque_finder/SRC/Presentation/Widgets/ImamProfile/imam_profile.
 import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Seclection_Screen/selection_screen.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/NotificationScreen/notification_screen.dart';
+import 'package:mosque_finder/SRC/Presentation/Widgets/TermsScreen/terms_and_condition_screen.dart';
 
 class CustomizeDrawerScreen extends StatelessWidget {
   final ImamModel imam;
@@ -101,9 +102,13 @@ class CustomizeDrawerScreen extends StatelessWidget {
                     ),
                     title: Text('Terms & Condition', style: styleMedium),
                     onTap: () {
-                      /// Close Navigation drawer before
-                      // Navigator.pop(context);
-                      // Navigator.push(context, MaterialPageRoute(builder: (context) => FavouriteScreen()),);
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TermsAndConditionScreen(),
+                        ),
+                      );
                     },
                   ),
                   const Divider(color: Colors.black45),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:mosque_finder/SRC/Data/Resources/App_Strings/app_titles.dart';
+import 'package:mosque_finder/SRC/Presentation/Common/common_Icon.dart';
 
-import '../../../../Application/Utils/Extensions/padding.dart';
-import '../../../../Data/Resources/App_Strings/app_titles.dart';
-import '../../../Common/common_Icon.dart';
+import '../../../../Data/Resources/Export/exports.dart';
 
 class WierdCard extends StatefulWidget {
   const WierdCard({super.key});
@@ -53,8 +53,8 @@ class _WierdCardState extends State<WierdCard> {
 
         // Center content with only text animating
         SizedBox(
-          height: 120, // give it some fixed space
-          width: 180,
+          height: 150.h, // give it some fixed space
+          width: 220.w,
           child: Center(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),

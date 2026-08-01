@@ -5,6 +5,7 @@ import 'package:mosque_finder/SRC/Application/Cubit/Muqtadi/muqtadi_cubit.dart';
 import 'package:mosque_finder/SRC/Application/Utils/Extensions/padding.dart';
 import 'package:mosque_finder/SRC/Data/Resources/App_Paths/paths.dart';
 import 'package:mosque_finder/SRC/Data/Resources/colors/app_colors.dart';
+import 'package:mosque_finder/SRC/Presentation/Common/Agreement/agreement_dialog.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/Login/login_screen.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Seclection_Screen/components/selection_card.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/bottom_navigation/bottom_navigation_screen.dart';
@@ -17,6 +18,14 @@ class SelectionScreen extends StatefulWidget {
 }
 
 class _SelectionScreenState extends State<SelectionScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AgreementDialog.show(context);
+    });
+  }
+
   void Function()? muqtadi() {
     context.read<MuqtadiCubit>().fetchNearbyMosques();
     Navigator.push(

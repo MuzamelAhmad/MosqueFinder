@@ -191,10 +191,10 @@ class _TasbihScreenState extends State<TasbihScreen> {
           ),
           SliverToBoxAdapter(
             child: Container(
-              height: 120,
+              height: 150.h,
               decoration: const BoxDecoration(color: Colors.transparent),
               child: const WierdCard(),
-            ).paddingAll(20),
+            ).paddingAll(5.r),
           ),
           SliverToBoxAdapter(
             child: SizedBox(
@@ -276,7 +276,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                               ),
                             ),
                           ],
-                        ).paddingAll(10),
+                        ).paddingAll(10.r),
                       ),
                     ),
                   ),

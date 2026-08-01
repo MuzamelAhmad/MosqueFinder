@@ -4,10 +4,13 @@ import 'package:intl/intl.dart';
 import 'package:mosque_finder/SRC/Application/Cubit/Imam/imam_cubit.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
 import 'package:mosque_finder/SRC/Data/repositories/ImamModel/imam_model.dart';
+import 'package:mosque_finder/SRC/Presentation/Common/Dialogs/professional_dialog.dart';
 import 'package:mosque_finder/SRC/Presentation/CustomDrawer/customize_drawer_screen.dart';
 import 'package:mosque_finder/SRC/Presentation/Common/CustomTimePicker/custom_time_picker.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/components/imam_pray_card.dart';
 import 'package:mosque_finder/SRC/Application/Services/notification_service.dart';
+import 'package:mosque_finder/SRC/Presentation/Common/Agreement/agreement_dialog.dart';
+import 'package:mosque_finder/SRC/Application/Utils/connectivity_helper.dart';
 
 class ImamScreen extends StatefulWidget {
   final String userId;
@@ -28,6 +31,9 @@ class _ImamScreenState extends State<ImamScreen> {
   void initState() {
     super.initState();
     context.read<ImamCubit>().getImamData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AgreementDialog.show(context);
+    });
   }
 
   // ── Time picker + update via cubit ──────────
@@ -39,7 +45,7 @@ class _ImamScreenState extends State<ImamScreen> {
 
     if (picked == null) return;
 
-    // Format as "4:30 PM" — 12-hour format
+    // ✅ Format as "4:30 PM" — 12-hour format (Professional)
     final now = DateTime.now();
     final dt =
         DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
@@ -58,34 +64,28 @@ class _ImamScreenState extends State<ImamScreen> {
     if (_isDialogShowing) return;
 
     _isDialogShowing = true;
-    showDialog(
+    ProfessionalDialog.show(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.indigo.shade900,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.wifi_off, color: Colors.white),
-            SizedBox(width: 10),
-            Text('No Internet', style: TextStyle(color: Colors.white)),
-          ],
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
+      title: 'No Internet',
+      content: message,
+      icon: Icons.wifi_off_rounded,
+      iconColor: Colors.orangeAccent,
+      actions: [
+        Expanded(
+          child: ElevatedButton(
             onPressed: () {
               _isDialogShowing = false;
               Navigator.pop(context);
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white10,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            ),
             child: const Text('OK', style: TextStyle(color: Colors.white)),
           ),
-        ],
-      ),
-    ).then((_) => _isDialogShowing = false);
+        ),
+      ],
+    );
   }
 
   @override
@@ -135,9 +135,16 @@ class _ImamScreenState extends State<ImamScreen> {
               'Welcome Imam',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onPrimary,
+                fontSize: 18.sp,
               ),
             ),
             centerTitle: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                onPressed: () => context.read<ImamCubit>().getImamData(),
+              ),
+            ],
             leading: Builder(
               builder: (context) => IconButton(
                 icon: Icon(Icons.menu, color: theme.colorScheme.onPrimary),
@@ -172,7 +179,7 @@ class _ImamScreenState extends State<ImamScreen> {
       ImamModel? imamToShow) {
     // ── 1. Show Full Screen Loader ONLY if we have NO data at all
     if (state is ImamLoading && imamToShow == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
 
     // ── 2. Show Error ONLY if we have no cached data to fall back on
@@ -182,12 +189,13 @@ class _ImamScreenState extends State<ImamScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline,
-                color: theme.colorScheme.onPrimary, size: 48),
+                color: theme.colorScheme.onPrimary, size: 48.r),
             SizedBox(height: 12.h),
             Text(state.message,
+                textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onPrimary)),
-            SizedBox(height: 12.h),
+                    ?.copyWith(color: theme.colorScheme.onPrimary, fontSize: 14.sp)),
+            SizedBox(height: 20.h),
             ElevatedButton(
               onPressed: () => context.read<ImamCubit>().getImamData(),
               child: const Text('Retry'),
@@ -218,10 +226,41 @@ class _ImamScreenState extends State<ImamScreen> {
         children: [
           CustomScrollView(
             slivers: [
+              // Offline Tag
+              SliverToBoxAdapter(
+                child: FutureBuilder<bool>(
+                  future: ConnectivityHelper.hasInternet(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data == false) {
+                      return Container(
+                        margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                        padding: EdgeInsets.all(10.w),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.cloud_off_rounded, color: Colors.orangeAccent, size: 20.r),
+                            SizedBox(width: 12.w),
+                            Text(
+                              "Offline Mode: Showing saved timings",
+                              style: TextStyle(color: Colors.orangeAccent, fontSize: 13.sp, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+
               SliverAppBar(
                 automaticallyImplyLeading: false,
                 iconTheme: theme.iconTheme,
-                expandedHeight: 150,
+                expandedHeight: 140.h,
                 elevation: 0,
                 backgroundColor: Colors.transparent,
                 flexibleSpace: Column(
@@ -232,9 +271,10 @@ class _ImamScreenState extends State<ImamScreen> {
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
+                        fontSize: 20.sp,
                       ),
                     ),
-                    SizedBox(height: 20.h),
+                    SizedBox(height: 16.h),
                     ImamPrayCard(
                       widget: Center(
                         child: Text(
@@ -242,6 +282,7 @@ class _ImamScreenState extends State<ImamScreen> {
                           style: theme.textTheme.labelLarge?.copyWith(
                             color: theme.colorScheme.onPrimary,
                             fontWeight: FontWeight.bold,
+                            fontSize: 16.sp,
                           ),
                         ),
                       ),
@@ -270,6 +311,7 @@ class _ImamScreenState extends State<ImamScreen> {
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: theme.colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
+                              fontSize: 16.sp,
                             ),
                           ),
                         ),
@@ -278,21 +320,20 @@ class _ImamScreenState extends State<ImamScreen> {
                             time,
                             textAlign: TextAlign.left,
                             style: theme.textTheme.labelLarge?.copyWith(
-                              // ✅ Fixed: Green when set, not when empty
                               color: isSet
-                                  ? Colors.green
+                                  ? Colors.greenAccent.shade400
                                   : theme.colorScheme.onPrimary,
                               fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
                             ),
                           ),
                         ),
                         Expanded(
                           child: IconButton(
                             icon: Icon(
-                              Icons.edit_calendar_outlined,
-                              // ✅ Fixed: Green when set, not when empty
+                              Icons.edit_calendar_rounded,
                               color: isSet
-                                  ? Colors.green
+                                  ? Colors.greenAccent.shade400
                                   : theme.colorScheme.onPrimary,
                             ),
                             onPressed: () => _selectTime(context, key),
@@ -304,9 +345,9 @@ class _ImamScreenState extends State<ImamScreen> {
                 },
               ),
             ],
-          ).paddingSymmetric(horizontal: 20.w, vertical: 20.h),
+          ).paddingSymmetric(horizontal: 20.w, vertical: 10.h),
 
-          // ── Optional: Show a small indicator if we are refreshing in background
+          // ── Background Refresh Indicator
           if (state is ImamLoading && imamToShow != null)
             const Positioned(
               top: 0,

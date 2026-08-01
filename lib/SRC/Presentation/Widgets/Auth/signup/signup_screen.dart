@@ -15,12 +15,32 @@ class SignupScreen extends StatefulWidget {
   State<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver {
   // Holds location data after picked
   double? _latitude;
   double? _longitude;
   String _cityName = '';
   String? passChecker;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // ✅ Automatically check for location if user returns from settings
+    if (state == AppLifecycleState.resumed && _latitude == null) {
+      context.read<ImamCubit>().pickLocation();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,260 +75,200 @@ class _SignupScreenState extends State<SignupScreen> {
             CustomSnackBar.showError(context, state.message);
           }
         },
-        child: Scaffold(
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: AppColors.bgColors,
-              ),
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: AppColors.bgColors,
             ),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Text(
-                      'Welcome Sign Up',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  SizedBox(height: 20.h),
+                  Text(
+                    'Create Imam Account',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24.sp,
                     ),
-                    SizedBox(
-                      height: 350.h,
-                      child: Form(
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        key: GlobalKey<FormState>(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Consumer<TextFieldController>(
-                              builder: (context, value, child) {
-                                return TextFromFieldCommon(
-                                  controller: value.text,
-                                  validator: (value) {
-                                    return Validators().validateEmail(value);
-                                  },
-                                  isIconShow: true,
-                                  iConData: Icons.cancel_outlined,
-                                  hintTitle: 'Email',
-                                  onTap: () {
-                                    if (value.text.text.isNotEmpty) {
-                                      value.clearText();
-                                    } else {
-                                      return null;
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                            SizedBox(height: 10.h),
-                            Consumer<TextFieldController>(
-                              builder: (context, value, child) {
-                                return TextFromFieldCommon(
-                                  controller: value.fullName,
-                                  validator: (value) {},
-                                  isIconShow: true,
-                                  iConData: Icons.cancel_outlined,
-                                  hintTitle: 'Full Name',
-                                  onTap: () {
-                                    if (value.fullName.text.isNotEmpty) {
-                                      value.fullNameClearText();
-                                    } else {
-                                      return null;
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                            SizedBox(height: 10.h),
-                            Consumer<TextFieldController>(
-                              builder: (context, value, child) {
-                                return TextFromFieldCommon(
-                                  controller: value.mosqueName,
-                                  validator: (value) {},
-                                  isIconShow: true,
-                                  iConData: Icons.cancel_outlined,
-                                  hintTitle: 'Mosque Name',
-                                  onTap: () {
-                                    if (value.mosqueName.text.isNotEmpty) {
-                                      value.mosqueNameClearText();
-                                    } else {
-                                      return null;
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                            SizedBox(height: 10.h),
-                            Consumer<PasswordController>(
-                              builder: (context, value, child) {
-                                return PasswordFormField(
-                                  controller: value.getPassword,
-                                  validator: (value) {
-                                    Validators().validatePassword(value);
-                                    passChecker = value;
-                                  },
-                                  hintTitle: 'Password',
-                                  show: value.isObscureText,
-                                  onTap: () {
-                                    value.toggleObscureText();
-                                  },
-                                );
-                              },
-                            ),
-                            SizedBox(height: 10.h),
-                            Consumer<PasswordController>(
-                              builder: (context, value, child) {
-                                return PasswordFormField(
-                                  controller: value.confPassword,
-                                  validator: (value) {
-                                    return Validators().validateConfirmPassword(
-                                      value,
-                                      passChecker,
-                                    );
-                                  },
-                                  hintTitle: 'Confirm Password',
-                                  show: value.getObscureText,
-                                  onTap: () {
-                                    value.toggleConfObscureText();
-                                  },
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ).paddingOnly(top: 10.h, bottom: 10.h),
-                    ),
-                    // ── Location Picker ─────────────────────
-                    BlocBuilder<ImamCubit, ImamState>(
-                      builder: (context, state) {
-                        final isLoading = state is ImamLocationLoading;
-                        return GestureDetector(
-                          onTap: isLoading
-                              ? null
-                              : () => context.read<ImamCubit>().pickLocation(),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16.w,
-                              vertical: 12.h,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: _latitude != null
-                                    ? Colors.green
-                                    : theme.colorScheme.onPrimary.withOpacity(
-                                        0.5,
-                                      ),
-                              ),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                isLoading
-                                    ? SizedBox(
-                                        width: 18.w,
-                                        height: 18.h,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: theme.colorScheme.onPrimary,
-                                        ),
-                                      )
-                                    : Icon(
-                                        _latitude != null
-                                            ? Icons.location_on
-                                            : Icons.location_off_outlined,
-                                        color: _latitude != null
-                                            ? Colors.green
-                                            : theme.colorScheme.onPrimary,
-                                        size: 20.sp,
-                                      ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  _latitude != null
-                                      ? '📍 $_cityName'
-                                      : 'Pick Your Location',
-                                  style: theme.textTheme.labelLarge?.copyWith(
-                                    color: _latitude != null
-                                        ? Colors.green
-                                        : theme.colorScheme.onPrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(height: 10.h),
-                    // ── Signup Button ───────────────────────
-                    BlocBuilder<ImamCubit, ImamState>(
-                      builder: (context, state) {
-                        final isLoading = state is ImamLoading;
-                        return isLoading
-                            ? const CircularProgressIndicator()
-                            : CustomBotton(
-                                text: 'Sign Up',
-                                onTap: () {
-                                  final textController =
-                                      Provider.of<TextFieldController>(
-                                        context,
-                                        listen: false,
-                                      );
-                                  final passwordController =
-                                      Provider.of<PasswordController>(
-                                        context,
-                                        listen: false,
-                                      );
-
-                                  if (_latitude == null || _longitude == null) {
-                                    CustomSnackBar.showError(context, 'Please pick your location first');
-                                    return;
-                                  }
-
-                                  context.read<ImamCubit>().signUp(
-                                    email: textController.text.text.trim(),
-                                    password: passwordController
-                                        .getPassword
-                                        .text
-                                        .trim(),
-                                    fullName: textController.fullName.text
-                                        .trim(),
-                                    latitude: _latitude!,
-                                    longitude: _longitude!,
-                                    city: _cityName,
-                                    mosqueName: textController.mosqueName.text
-                                        .trim(),
-                                  );
-                                },
+                  ),
+                  SizedBox(height: 30.h),
+                  SizedBox(
+                    child: Form(
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      key: GlobalKey<FormState>(),
+                      child: Column(
+                        children: [
+                          Consumer<TextFieldController>(
+                            builder: (context, value, child) {
+                              return TextFromFieldCommon(
+                                controller: value.text,
+                                validator: (value) => Validators().validateEmail(value),
+                                isIconShow: true,
+                                iConData: Icons.cancel_outlined,
+                                hintTitle: 'Email',
+                                onTap: () => value.clearText(),
                               );
-                      },
-                    ),
-                    SizedBox(height: 10.h),
-                    SocialAccountCard(
-                      title1: 'Already have an account? ',
-                      Title2: 'Sign In',
-                      OnTap: () {
-                        context.read<TextFieldController>().allClear();
-                        context.read<PasswordController>().clearPasswords();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => LoginScreen(),
+                            },
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ).paddingSymmetric(horizontal: 20.h, vertical: 20.h),
-              ),
+                          SizedBox(height: 12.h),
+                          Consumer<TextFieldController>(
+                            builder: (context, value, child) {
+                              return TextFromFieldCommon(
+                                controller: value.fullName,
+                                validator: (value) => value!.isEmpty ? 'Name required' : null,
+                                isIconShow: true,
+                                iConData: Icons.cancel_outlined,
+                                hintTitle: 'Full Name',
+                                onTap: () => value.fullNameClearText(),
+                              );
+                            },
+                          ),
+                          SizedBox(height: 12.h),
+                          Consumer<TextFieldController>(
+                            builder: (context, value, child) {
+                              return TextFromFieldCommon(
+                                controller: value.mosqueName,
+                                validator: (value) => value!.isEmpty ? 'Mosque required' : null,
+                                isIconShow: true,
+                                iConData: Icons.cancel_outlined,
+                                hintTitle: 'Mosque Name',
+                                onTap: () => value.mosqueNameClearText(),
+                              );
+                            },
+                          ),
+                          SizedBox(height: 12.h),
+                          Consumer<PasswordController>(
+                            builder: (context, value, child) {
+                              return PasswordFormField(
+                                controller: value.getPassword,
+                                validator: (value) {
+                                  Validators().validatePassword(value);
+                                  passChecker = value;
+                                },
+                                hintTitle: 'Password',
+                                show: value.isObscureText,
+                                onTap: () => value.toggleObscureText(),
+                              );
+                            },
+                          ),
+                          SizedBox(height: 12.h),
+                          Consumer<PasswordController>(
+                            builder: (context, value, child) {
+                              return PasswordFormField(
+                                controller: value.confPassword,
+                                validator: (value) => Validators().validateConfirmPassword(value, passChecker),
+                                hintTitle: 'Confirm Password',
+                                show: value.getObscureText,
+                                onTap: () => value.toggleConfObscureText(),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ).paddingSymmetric(horizontal: 20.w),
+                  ),
+                  SizedBox(height: 24.h),
+                  
+                  // ── Location Picker ─────────────────────
+                  BlocBuilder<ImamCubit, ImamState>(
+                    builder: (context, state) {
+                      final isLoading = state is ImamLocationLoading;
+                      return GestureDetector(
+                        onTap: isLoading ? null : () => context.read<ImamCubit>().pickLocation(),
+                        child: Container(
+                          margin: EdgeInsets.symmetric(horizontal: 20.w),
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            border: Border.all(
+                              color: _latitude != null ? Colors.greenAccent : Colors.white24,
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(16.r),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              isLoading
+                                  ? SizedBox(
+                                      width: 20.w,
+                                      height: 20.h,
+                                      child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : Icon(
+                                      _latitude != null ? Icons.location_on_rounded : Icons.location_searching_rounded,
+                                      color: _latitude != null ? Colors.greenAccent : Colors.white,
+                                      size: 22.r,
+                                    ),
+                              SizedBox(width: 12.w),
+                              Text(
+                                _latitude != null ? '📍 $_cityName' : 'Detect Mosque Location',
+                                style: TextStyle(
+                                  color: _latitude != null ? Colors.greenAccent : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: 24.h),
+
+                  // ── Signup Button ───────────────────────
+                  BlocBuilder<ImamCubit, ImamState>(
+                    builder: (context, state) {
+                      final isLoading = state is ImamLoading;
+                      return isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : CustomBotton(
+                              text: 'Sign Up',
+                              onTap: () {
+                                final textController = context.read<TextFieldController>();
+                                final passwordController = context.read<PasswordController>();
+
+                                if (_latitude == null || _longitude == null) {
+                                  CustomSnackBar.showError(context, 'Please detect location first');
+                                  return;
+                                }
+
+                                context.read<ImamCubit>().signUp(
+                                  email: textController.text.text.trim(),
+                                  password: passwordController.getPassword.text.trim(),
+                                  fullName: textController.fullName.text.trim(),
+                                  latitude: _latitude!,
+                                  longitude: _longitude!,
+                                  city: _cityName,
+                                  mosqueName: textController.mosqueName.text.trim(),
+                                );
+                              },
+                            );
+                    },
+                  ).paddingSymmetric(horizontal: 20.w),
+
+                  SizedBox(height: 20.h),
+                  SocialAccountCard(
+                    title1: 'Already have an account? ',
+                    Title2: 'Sign In',
+                    OnTap: () {
+                      context.read<TextFieldController>().allClear();
+                      context.read<PasswordController>().clearPasswords();
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+                    },
+                  ),
+                  SizedBox(height: 40.h),
+                ],
+              ).paddingSymmetric(horizontal: 20.w, vertical: 20.h),
             ),
           ),
         ),

@@ -13,10 +13,10 @@ class _BottomNavigationScreenState extends State<BottomNavigationScreen> {
   final ValueNotifier<int> currentPage = ValueNotifier(0);
   List<Widget> pages = [
     NearbyMosquesScreen(),
-    Container(color: Colors.red),
-    Container(color: Colors.white),
+    // Container(color: Colors.red),
+    // Container(color: Colors.white),
     const TasbihScreen(),
-    Container(color: Colors.blueGrey),
+    // Container(color: Colors.blueGrey),
   ];
 
   @override
@@ -62,19 +62,19 @@ class _BottomNavigationScreenState extends State<BottomNavigationScreen> {
             currentIndex: currentPage.value, // Home
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.search),
-                label: "Search",
-              ),
-              BottomNavigationBarItem(icon: Icon(Icons.book), label: "Quran"),
+              // BottomNavigationBarItem(
+              //   icon: Icon(Icons.search),
+              //   label: "Search",
+              // ),
+              // BottomNavigationBarItem(icon: Icon(Icons.book), label: "Quran"),
               BottomNavigationBarItem(
                 icon: Icon(Icons.calculate),
                 label: "Tasbih",
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.more_horiz),
-                label: "More",
-              ),
+              // BottomNavigationBarItem(
+              //   icon: Icon(Icons.more_horiz),
+              //   label: "More",
+              // ),
             ],
           );
         },

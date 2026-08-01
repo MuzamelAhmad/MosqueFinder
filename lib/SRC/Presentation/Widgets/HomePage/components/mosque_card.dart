@@ -5,7 +5,9 @@ class MosqueCard extends StatelessWidget {
   final String? distance;
   final String? fajrTime;
   final String? dhuhrTime;
+  final String? jummaTime;
   final String? asrTime;
+  final String? maghribTime;
   final String? ishaTime;
   final String? currentPrayer;
   final String? distanceSmall;
@@ -19,7 +21,9 @@ class MosqueCard extends StatelessWidget {
     this.distance,
     this.fajrTime,
     this.dhuhrTime,
+    this.jummaTime,
     this.asrTime,
+    this.maghribTime,
     this.ishaTime,
     this.currentPrayer,
     this.distanceSmall,
@@ -31,6 +35,8 @@ class MosqueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isFriday = DateTime.now().weekday == DateTime.friday;
+
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.onPrimary.withAlpha((255 * 0.12).toInt()),
@@ -132,7 +138,14 @@ class MosqueCard extends StatelessWidget {
                   currentPrayer == "Fajr",
                   context,
                 ),
-              if (dhuhrTime != null)
+              if (isFriday && jummaTime != null)
+                _buildPrayerTime(
+                  "Jumma",
+                  jummaTime!,
+                  currentPrayer == "Jumma",
+                  context,
+                )
+              else if (dhuhrTime != null)
                 _buildPrayerTime(
                   "Dhuhr",
                   dhuhrTime!,
@@ -144,6 +157,13 @@ class MosqueCard extends StatelessWidget {
                   "Asr",
                   asrTime!,
                   currentPrayer == "Asr",
+                  context,
+                ),
+              if (maghribTime != null)
+                _buildPrayerTime(
+                  "Maghrib",
+                  maghribTime!,
+                  currentPrayer == "Maghrib",
                   context,
                 ),
               if (ishaTime != null)

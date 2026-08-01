@@ -19,6 +19,7 @@ import 'SRC/Data/repositories/DI_Services/mosque_DI.dart';
 import 'SRC/Presentation/Common/TextFromField/Controller/text_field_controller.dart';
 import 'SRC/Presentation/Widgets/PrayerTimesScreen/controller/hijri_provider.dart';
 import 'SRC/Presentation/Widgets/ImamScreen/imam_screen.dart';
+import 'SRC/Presentation/Widgets/SplashScreen/splash_screen.dart';
 
 // ✅ Global navigator key for background navigation (like password reset)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -37,15 +38,12 @@ void main() async {
   await NotificationService.init();
   // Permission will be requested when user enables notifications or sets times
 
-  final String? savedUserId = await SharedPrefsService.getUserId();
-  
-  runApp(MyApp(initialUserId: savedUserId));
+  runApp(const MyApp());
   getIt.registerLazySingleton<MosqueDiServices>(() => MosqueDiServices());
 }
 
 class MyApp extends StatefulWidget {
-  final String? initialUserId;
-  const MyApp({super.key, this.initialUserId});
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -93,9 +91,7 @@ class _MyAppState extends State<MyApp> {
                 return Theme(data: LightTheme.getTheme(context), child: child!);
               },
               debugShowCheckedModeBanner: false,
-              home: widget.initialUserId != null
-                  ? ImamScreen(userId: widget.initialUserId!)
-                  : const SelectionScreen(),
+              home: const SplashScreen(),
             );
           },
         ),
