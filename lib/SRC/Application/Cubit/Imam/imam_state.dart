@@ -111,3 +111,21 @@ class ImamNoInternetError extends ImamState {
   final String message;
   ImamNoInternetError(this.message);
 }
+
+// ── Social Login ─────────────────────────────
+class ImamSocialLoginIncomplete extends ImamState {
+  final String userId;
+  final String email;
+  final String name;
+
+  ImamSocialLoginIncomplete({
+    required this.userId,
+    required this.email,
+    required this.name,
+  });
+}
+
+class ImamSocialLoginError extends ImamState {
+  final String message;
+  ImamSocialLoginError(this.message);
+}

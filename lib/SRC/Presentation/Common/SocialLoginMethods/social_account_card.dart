@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mosque_finder/SRC/Data/Resources/App_Paths/paths.dart'
     show AppPath;
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
+import 'package:mosque_finder/SRC/Application/Cubit/Imam/imam_cubit.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/Login/controller/components/logo_card.dart';
 
 class SocialAccountCard extends StatelessWidget {
@@ -56,9 +57,15 @@ class SocialAccountCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            LogoCard(path: AppPath.google),
+            InkWell(
+              onTap: () => context.read<ImamCubit>().signInWithGoogle(),
+              child: LogoCard(path: AppPath.google),
+            ),
             SizedBox(width: 10.w),
-            LogoCard(path: AppPath.facebook),
+            InkWell(
+              onTap: () => context.read<ImamCubit>().signInWithFacebook(),
+              child: LogoCard(path: AppPath.facebook),
+            ),
           ],
         ),
       ],

@@ -25,21 +25,33 @@ import 'SRC/Presentation/Widgets/SplashScreen/splash_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  await dotenv.load(fileName: '.env');
-  WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: dotenv.env['Supabase_url']!,
-    anonKey: dotenv.env['Supabase_anon_key']!,
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce,
-    ),
-  );
+  debugPrint('APP: Initialization started...');
   
-  await NotificationService.init();
-  // Permission will be requested when user enables notifications or sets times
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await dotenv.load(fileName: '.env');
+    
+    await Supabase.initialize(
+      url: dotenv.env['Supabase_url']!,
+      anonKey: dotenv.env['Supabase_anon_key']!,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
+    );
+    debugPrint('APP: Supabase ready.');
 
+    await NotificationService.init();
+    debugPrint('APP: Notifications ready.');
+
+    getIt.registerLazySingleton<MosqueDiServices>(() => MosqueDiServices());
+    debugPrint('APP: DI Services ready.');
+
+  } catch (e) {
+    debugPrint('APP: Initialization ERROR: $e');
+  }
+
+  debugPrint('APP: Launching UI...');
   runApp(const MyApp());
-  getIt.registerLazySingleton<MosqueDiServices>(() => MosqueDiServices());
 }
 
 class MyApp extends StatefulWidget {
@@ -57,11 +69,20 @@ class _MyAppState extends State<MyApp> {
     // ✅ Listen for password recovery events from Supabase
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final AuthChangeEvent event = data.event;
+      final session = data.session;
+
+      debugPrint('APP: Auth Event: $event');
+
       if (event == AuthChangeEvent.passwordRecovery) {
         // Navigate to reset password screen
         navigatorKey.currentState?.push(
           MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
         );
+      }
+
+      // ✅ Handle Social Login Callback
+      if (event == AuthChangeEvent.signedIn && session != null) {
+        navigatorKey.currentContext?.read<ImamCubit>().handlePostSocialLogin();
       }
     });
   }
@@ -80,12 +101,13 @@ class _MyAppState extends State<MyApp> {
           ChangeNotifierProvider(create: (_) => TextFieldController()),
         ],
         child: ScreenUtilInit(
-          designSize: Size(MediaQuery.sizeOf(context).width, MediaQuery.sizeOf(context).height),
+          // Use a fixed size instead of MediaQuery.sizeOf on startup to prevent hangs
+          designSize: const Size(360, 690),
           minTextAdapt: true,
           splitScreenMode: true,
           builder: (_, child) {
             return MaterialApp(
-              navigatorKey: navigatorKey, // ✅ Assign the global key
+              navigatorKey: navigatorKey,
               title: 'Mosque Finder',
               builder: (context, child) {
                 return Theme(data: LightTheme.getTheme(context), child: child!);

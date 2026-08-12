@@ -38,22 +38,45 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigateToNext() async {
-    // Wait for animation + a bit extra for brand awareness
-    await Future.delayed(const Duration(milliseconds: 3000));
+    debugPrint('APP: Splash navigation started...');
     
-    if (!mounted) return;
+    try {
+      // 1. Minimum delay for animation brand awareness
+      await Future.delayed(const Duration(milliseconds: 3000));
+      
+      if (!mounted) return;
 
-    final String? userId = await SharedPrefsService.getUserId();
-
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => userId != null 
-            ? ImamScreen(userId: userId) 
-            : const SelectionScreen(),
-        ),
+      // 2. Check for persisted user session
+      final String? userId = await SharedPrefsService.getUserId().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          debugPrint('APP: SharedPrefs check timed out.');
+          return null;
+        },
       );
+
+      debugPrint('APP: Cached UserId: $userId');
+
+      if (mounted) {
+        debugPrint('APP: Navigating to next screen...');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => userId != null 
+              ? ImamScreen(userId: userId) 
+              : const SelectionScreen(),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('APP: Splash Error: $e');
+      // Emergency Fallback
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SelectionScreen()),
+        );
+      }
     }
   }
 
@@ -92,6 +115,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         'assets/images/logo.svg',
                         width: 180.w,
                         height: 180.h,
+                        placeholderBuilder: (context) => const CircularProgressIndicator(color: Colors.white24),
                       ),
                       SizedBox(height: 24.h),
                       Text(
@@ -103,9 +127,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           letterSpacing: 2,
                         ),
                       ),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: 12.h),
                       Text(
-                        'Connecting Hearts, Synchronizing Prayers',
+                        'Punctuality in Prayer, Unity in Jama’at',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        '“Never Miss a Jama’at Again”',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 14.sp,

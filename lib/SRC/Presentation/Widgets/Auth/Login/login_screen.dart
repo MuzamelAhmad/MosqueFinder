@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mosque_finder/SRC/Application/Cubit/Imam/imam_cubit.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
+import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
+import 'package:mosque_finder/SRC/Application/Services/notification_service.dart';
+import 'package:mosque_finder/SRC/Data/Resources/Validator/validators.dart';
 import 'package:mosque_finder/SRC/Presentation/Common/SocialLoginMethods/social_account_card.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/signup/signup_screen.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/ImamScreen/imam_screen.dart';
-import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
+import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/signup/complete_profile_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +18,71 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  Future<void> _handleLoginSuccess(BuildContext context, String userId) async {
+    final bool hasPerms = await NotificationService.hasPermissions();
+
+    if (!hasPerms && mounted) {
+      // Show professional permission dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Colors.indigo.shade900,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
+          title: const Row(
+            children: [
+              Icon(Icons.notifications_active, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Enable Alerts', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+          content: const Text(
+            'To provide you with punctual prayer reminders, MosqueFinder needs your permission to show notifications and set alarms.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _navigateToImamScreen(userId);
+              },
+              child:
+                  const Text('Skip', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                await NotificationService.requestPermissions();
+                _navigateToImamScreen(userId);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r)),
+              ),
+              child:
+                  const Text('Enable', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _navigateToImamScreen(userId);
+    }
+  }
+
+  void _navigateToImamScreen(String userId) {
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImamScreen(userId: userId),
+      ),
+      (route) => false,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +117,20 @@ class _LoginScreenState extends State<LoginScreen> {
         // ── Login Error ────────────────────────
         if (state is ImamLoginError) {
           CustomSnackBar.showError(context, state.message);
+        }
+
+        // ── Social Login Incomplete ──────────────
+        if (state is ImamSocialLoginIncomplete) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CompleteProfileScreen(
+                userId: state.userId,
+                email: state.email,
+                fullName: state.name,
+              ),
+            ),
+          );
         }
       },
       child: Scaffold(
@@ -98,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 builder: (context, value, child) {
                                   return TextFromFieldCommon(
                                     controller: value.text,
-                                    validator: (value) => null,
+                                    validator: (value) => Validators().validateEmail(value),
                                     isIconShow: true,
                                     iConData: Icons.cancel_outlined,
                                     hintTitle: 'Email',
@@ -117,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 builder: (context, value, child) {
                                   return PasswordFormField(
                                     controller: value.getPassword,
-                                    validator: (value) => null,
+                                    validator: (value) => Validators().validatePassword(value),
                                     hintTitle: 'Password',
                                     show: value.isObscureText,
                                     onTap: () {

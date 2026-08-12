@@ -1,0 +1,7 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Monochromatic White Mosque Silhouette for Android Notifications -->
+  <path d="M256 80C180 80 130 140 130 220V340H382V220C382 140 332 80 256 80Z" fill="white"/>
+  <rect x="110" y="210" width="25" height="130" rx="4" fill="white"/>
+  <rect x="377" y="210" width="25" height="130" rx="4" fill="white"/>
+  <path d="M256 30C245 30 238 38 238 48C238 58 245 66 256 66C267 66 274 58 274 48C274 38 267 30 256 30ZM256 38C260 38 266 42 266 48C266 54 260 58 256 58C252 58 246 54 246 48C246 42 252 38 256 38Z" fill="white"/>
+</svg>

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mosque_finder/SRC/Data/repositories/ImamModel/imam_model.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
@@ -15,9 +16,13 @@ class NotificationService {
   // ✅ Initialize
   static Future<void> init() async {
     tz.initializeTimeZones();
+    final TimezoneInfo timezone =  await FlutterTimezone.getLocalTimezone();
+    final String timeZoneName = timezone.identifier;
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
+    debugPrint('NOTIF: Local timezone set to $timeZoneName');
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('notification_icon');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
@@ -56,9 +61,13 @@ class NotificationService {
     final bool? granted = await androidPlugin.requestNotificationsPermission();
 
     // Request exact alarm permission (Android 12+)
-    final bool? exactGranted = await androidPlugin.requestExactAlarmsPermission();
+    // Note: requestExactAlarmsPermission might not return true immediately on some devices
+    await androidPlugin.requestExactAlarmsPermission();
 
-    return (granted ?? false) && (exactGranted ?? false);
+    // Check again after request
+    final bool hasExact = await hasPermissions();
+
+    return (granted ?? false) && hasExact;
   }
 
   // ✅ Check if permissions are granted
@@ -68,8 +77,13 @@ class NotificationService {
 
     if (androidPlugin == null) return false;
 
+    // Check notification permission (Android 13+)
+    final bool? notifGranted = await androidPlugin.areNotificationsEnabled();
+    
+    // Check exact alarm permission (Android 12+)
     final bool? canSchedule = await androidPlugin.canScheduleExactNotifications();
-    return canSchedule ?? false;
+    
+    return (notifGranted ?? false) && (canSchedule ?? false);
   }
 
   // ✅ Check if enabled
@@ -107,13 +121,13 @@ class NotificationService {
     debugPrint('NOTIF: Scheduling high-priority alerts...');
 
     // 2. Schedule each prayer
-    _scheduleDaily(1, 'Fajr', times.fajr);
-    _scheduleDaily(4, 'Asr', times.asr);
-    _scheduleDaily(5, 'Maghrib', times.maghrib);
-    _scheduleDaily(6, 'Isha', times.isha);
+    await _scheduleDaily(1, 'Fajr', times.fajr);
+    await _scheduleDaily(4, 'Asr', times.asr);
+    await _scheduleDaily(5, 'Maghrib', times.maghrib);
+    await _scheduleDaily(6, 'Isha', times.isha);
 
     // Dhuhr: Sat-Thu
-    _scheduleSpecificDays(2, 'Dhuhr', times.dhuhr, [
+    await _scheduleSpecificDays(2, 'Dhuhr', times.dhuhr, [
       DateTime.monday,
       DateTime.tuesday,
       DateTime.wednesday,
@@ -123,7 +137,9 @@ class NotificationService {
     ]);
 
     // Jumma: Friday only
-    _scheduleSpecificDays(3, 'Jumma', times.jumma, [DateTime.friday]);
+    await _scheduleSpecificDays(3, 'Jumma', times.jumma, [DateTime.friday]);
+    
+    debugPrint('NOTIF: All alerts scheduled successfully ✅');
   }
 
   static Future<void> _scheduleDaily(int id, String name, String timeStr) async {
@@ -211,9 +227,11 @@ class NotificationService {
 
       // If the 5-min alert time has already passed today, set it for tomorrow
       if (scheduleTime.isBefore(now)) {
+        debugPrint('NOTIF: $timeStr has passed today, scheduling for tomorrow');
         scheduleTime = scheduleTime.add(const Duration(days: 1));
       }
 
+      debugPrint('NOTIF: Final schedule calculation for $timeStr -> $scheduleTime');
       return scheduleTime;
     } catch (e) {
       debugPrint('NOTIF: Error parsing time $timeStr -> $e');

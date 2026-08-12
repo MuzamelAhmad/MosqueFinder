@@ -61,7 +61,7 @@ class _AgreementDialogState extends State<AgreementDialog> {
               ),
               child: Column(
                 children: [
-                  Icon(Icons.mosque_outlined, color: Colors.white, size: 50.r),
+                  Icon(Icons.people_alt_rounded, color: Colors.white, size: 50.r),
                   SizedBox(height: 16.h),
                   Text(
                     'MosqueFinder',
@@ -72,14 +72,15 @@ class _AgreementDialogState extends State<AgreementDialog> {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 6.h),
                   Text(
-                    '“Connecting Hearts, Synchronizing Prayers”',
+                    '“Punctuality in Prayer, Unity in Jama’at”',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14.sp,
+                      color: Colors.white.withOpacity(0.95),
+                      fontSize: 15.sp,
                       fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

@@ -48,7 +48,7 @@ dependencies:
   flutter_bloc: ^9.1.1
   shared_preferences: ^2.2.2
   flutter_local_notifications: ^17.2.1
-  timezone: ^0.9.4
+  flutter_timezone: ^5.1.0
   flutter_svg: ^2.0.10+1
 #  prayers_times: ^0.0.6
 #  prayer_timetable: ^2.2.6
@@ -85,6 +85,9 @@ flutter:
     - assets/images/facebook_logo.png
     - assets/images/google_logo.png
     - assets/images/logo.svg
+    - assets/images/logo.png
+    - assets/images/notification_icon.svg
+    - assets/images/notification_icon.png
     - assets/font/
     - .env
 
@@ -130,3 +133,8 @@ flutter_launcher_icons:
   min_sdk_android: 21
   adaptive_icon_background: "#1A237E"
   adaptive_icon_foreground: "assets/images/logo.png"
+  # ✅ Modern notification icon (must be monochromatic)
+  notification_icon:
+    platforms:
+      android: true
+    image_path: "assets/images/notification_icon.png"

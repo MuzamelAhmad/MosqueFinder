@@ -33,7 +33,60 @@ class _ImamScreenState extends State<ImamScreen> {
     context.read<ImamCubit>().getImamData();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AgreementDialog.show(context);
+      _checkPermissions();
     });
+  }
+
+  Future<void> _checkPermissions() async {
+    final bool hasPerms = await NotificationService.hasPermissions();
+    if (!hasPerms && mounted) {
+      // Prompt user to enable alerts if they haven't yet
+      _showPermissionPrompt();
+    }
+  }
+
+  void _showPermissionPrompt() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.indigo.shade900,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
+        title: const Row(
+          children: [
+            Icon(Icons.notifications_active, color: Colors.white),
+            SizedBox(width: 12),
+            Text('Enable Alerts', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: const Text(
+          'To ensure you never miss a Jama\'at, MosqueFinder needs permission to set precise prayer alarms.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Later', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await NotificationService.requestPermissions();
+              // Re-schedule once granted
+              final state = context.read<ImamCubit>().state;
+              if (state is ImamLoaded) {
+                NotificationService.schedulePrayerNotifications(
+                    state.imam.prayTime);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Time picker + update via cubit ──────────

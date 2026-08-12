@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -377,6 +378,72 @@ class ImamCubit extends Cubit<ImamState> {
       emit(ImamPasswordUpdateError(e.message));
     } catch (e) {
       emit(ImamPasswordUpdateError('Error: $e'));
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //                 Social Login
+  // ═══════════════════════════════════════════
+
+  Future<void> signInWithGoogle() async {
+    await _signInWithOAuth(
+      OAuthProvider.google,
+      queryParams: {'prompt': 'select_account'},
+    );
+  }
+
+  Future<void> signInWithFacebook() async {
+    await _signInWithOAuth(OAuthProvider.facebook);
+  }
+
+  Future<void> _signInWithOAuth(
+    OAuthProvider provider, {
+    Map<String, String>? queryParams,
+  }) async {
+    emit(ImamLoading());
+    try {
+      debugPrint('APP: Starting Social Login with ${provider.name}...');
+      await Supabase.instance.client.auth.signInWithOAuth(
+        provider,
+        redirectTo: 'mosquefinder://login-callback',
+        queryParams: queryParams,
+      );
+    } catch (e) {
+      debugPrint('APP: OAuth Error -> $e');
+      emit(ImamSocialLoginError('OAuth Error: $e'));
+    }
+  }
+
+  // ✅ Triggered after deep link returns user to app
+  Future<void> handlePostSocialLogin() async {
+    debugPrint('MUQTADI: Handling post-social login check...');
+    // Small delay to ensure session is fully propagated
+    await Future.delayed(const Duration(seconds: 1));
+    
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      debugPrint('MUQTADI: No user found after social login callback.');
+      return;
+    }
+
+    try {
+      // Check if Imam entry exists
+      final existingImam = await _repo.getImamDataByUserId(user.id);
+      if (existingImam != null) {
+        debugPrint('MUQTADI: Existing social user found. Logging in...');
+        emit(ImamLoginSuccess(user.id));
+      } else {
+        debugPrint('MUQTADI: New social user detected. Navigating to completion screen...');
+        // First time social user -> collect mosque details
+        emit(ImamSocialLoginIncomplete(
+          userId: user.id,
+          email: user.email ?? '',
+          name: user.userMetadata?['full_name'] ?? '',
+        ));
+      }
+    } catch (e) {
+      debugPrint('MUQTADI: Profile check error -> $e');
+      emit(ImamSocialLoginError('Profile check failed: $e'));
     }
   }
 
