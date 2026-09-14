@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AgreementDialog extends StatefulWidget {
   const AgreementDialog({super.key});
@@ -23,7 +24,14 @@ class AgreementDialog extends StatefulWidget {
 }
 
 class _AgreementDialogState extends State<AgreementDialog> {
-  bool _showMore = false;
+  ValueNotifier<bool> _showMore = ValueNotifier(false);
+
+  Future<void> _launchPrivacyPolicy() async {
+    final Uri url = Uri.parse('https://drive.google.com/file/d/1wPkTwBJ_kfK17oOCTYx3hiXOztN0ABqN/view?usp=sharing');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +47,7 @@ class _AgreementDialogState extends State<AgreementDialog> {
           border: Border.all(color: Colors.white12, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withAlpha((0.5*255).toInt()),
               blurRadius: 20,
               offset: const Offset(0, 10),
             )
@@ -64,7 +72,7 @@ class _AgreementDialogState extends State<AgreementDialog> {
                   Icon(Icons.people_alt_rounded, color: Colors.white, size: 50.r),
                   SizedBox(height: 16.h),
                   Text(
-                    'MosqueFinder',
+                    'Salah 360',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24.sp,
@@ -77,7 +85,7 @@ class _AgreementDialogState extends State<AgreementDialog> {
                     '“Punctuality in Prayer, Unity in Jama’at”',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withAlpha((0.95*255).toInt()),
                       fontSize: 15.sp,
                       fontStyle: FontStyle.italic,
                       fontWeight: FontWeight.w600,
@@ -91,48 +99,68 @@ class _AgreementDialogState extends State<AgreementDialog> {
             Flexible(
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome to our community. To ensure a seamless experience for every Muqtadi and Imam, we need your agreement on:',
-                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14.sp),
-                    ),
-                    SizedBox(height: 20.h),
-                    
-                    _buildPermissionItem(
-                      Icons.location_on_rounded,
-                      'Live Proximity',
-                      'Calculates distances to show you the closest mosques in a 1-5 min walk.',
-                    ),
-                    _buildPermissionItem(
-                      Icons.notifications_active_rounded,
-                      'Precise Alarms',
-                      'Sends high-priority reminders 5 minutes before every Jama\'at.',
-                    ),
-                    
-                    if (_showMore) ...[
-                      SizedBox(height: 12.h),
-                      _buildPermissionItem(
-                        Icons.verified_user_rounded,
-                        'Community Impact',
-                        'By sharing accurate timings, Imams help the community maintain punctuality and unity in worship.',
-                      ),
-                      _buildPermissionItem(
-                        Icons.data_usage_rounded,
-                        'Secure Caching',
-                        'We save data locally so you can check prayer times even without internet.',
-                      ),
-                    ],
+                child: ValueListenableBuilder(
+                  valueListenable: _showMore,
+                  builder: (context, value, child) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome to our community. To ensure a seamless experience for every Muqtadi and Imam, we need your agreement on:',
+                          style: TextStyle(color: Colors.white.withAlpha((0.9*255).toInt()), fontSize: 14.sp),
+                        ),
+                        Text('By continuing, you agree to our ', style: TextStyle(color: Colors.white.withAlpha((0.9*255).toInt()), fontSize: 14.sp),
+                        ),
+                        GestureDetector(
+                          onTap: _launchPrivacyPolicy, // Uses the same launcher method above
+                          child:  Text(
+                            'Privacy Policy',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: 18,
+                              decoration: TextDecoration.underline,
 
-                    TextButton(
-                      onPressed: () => setState(() => _showMore = !_showMore),
-                      child: Text(
-                        _showMore ? 'Show Less' : 'Show More Details...',
-                        style: TextStyle(color: Colors.blueAccent.shade100, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
+                                decorationColor: Colors.blue,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 20.h),
+
+                        _buildPermissionItem(
+                          Icons.location_on_rounded,
+                          'Live Proximity',
+                          'Calculates distances to show you the closest mosques in a 1-5 min walk.',
+                        ),
+                        _buildPermissionItem(
+                          Icons.notifications_active_rounded,
+                          'Precise Alarms',
+                          'Sends high-priority reminders 5 minutes before every Jama\'at.',
+                        ),
+
+                        if (_showMore.value) ...[
+                          SizedBox(height: 10.h),
+                          _buildPermissionItem(
+                            Icons.verified_user_rounded,
+                            'Community Impact',
+                            'By sharing accurate timings, Imams help the community maintain punctuality and unity in worship.',
+                          ),
+                          _buildPermissionItem(
+                            Icons.data_usage_rounded,
+                            'Secure Caching',
+                            'We save data locally so you can check prayer times even without internet.',
+                          ),
+                        ],
+
+                        TextButton(
+                          onPressed: () =>_showMore.value = !_showMore.value,
+                          child: Text(
+                            _showMore.value ? 'Show Less' : 'Show More Details...',
+                            style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 20),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
                 ),
               ),
             ),
@@ -150,7 +178,7 @@ class _AgreementDialogState extends State<AgreementDialog> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                         padding: EdgeInsets.symmetric(vertical: 14.h),
                       ),
-                      child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                      child: Text('Cancel', style: theme.textTheme.titleSmall?.copyWith(color: Colors.white)),
                     ),
                   ),
                   SizedBox(width: 16.w),
@@ -164,11 +192,11 @@ class _AgreementDialogState extends State<AgreementDialog> {
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: Colors.white,
                         elevation: 8,
-                        shadowColor: theme.colorScheme.primary.withOpacity(0.5),
+                        shadowColor: theme.colorScheme.primary.withAlpha((0.5*255).toInt()),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                         padding: EdgeInsets.symmetric(vertical: 14.h),
                       ),
-                      child: const Text('I Agree', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('I Agree', style:theme.textTheme.titleSmall?.copyWith(color: Colors.white) ),
                     ),
                   ),
                 ],
@@ -189,7 +217,7 @@ class _AgreementDialogState extends State<AgreementDialog> {
           Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withAlpha((0.1*255).toInt()),
               borderRadius: BorderRadius.circular(10.r),
             ),
             child: Icon(icon, color: Colors.white, size: 20.r),

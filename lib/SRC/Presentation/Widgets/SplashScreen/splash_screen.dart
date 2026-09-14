@@ -38,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _navigateToNext() async {
-    debugPrint('APP: Splash navigation started...');
+    // debugPrint('APP: Splash navigation started...');
     
     try {
       // 1. Minimum delay for animation brand awareness
@@ -50,15 +50,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       final String? userId = await SharedPrefsService.getUserId().timeout(
         const Duration(seconds: 5),
         onTimeout: () {
-          debugPrint('APP: SharedPrefs check timed out.');
+          // debugPrint('APP: SharedPrefs check timed out.');
           return null;
         },
       );
 
-      debugPrint('APP: Cached UserId: $userId');
+      // debugPrint('APP: Cached UserId: $userId');
 
       if (mounted) {
-        debugPrint('APP: Navigating to next screen...');
+        // debugPrint('APP: Navigating to next screen...');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         );
       }
     } catch (e) {
-      debugPrint('APP: Splash Error: $e');
+      // debugPrint('APP: Splash Error: $e');
       // Emergency Fallback
       if (mounted) {
         Navigator.pushReplacement(
@@ -119,7 +119,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       ),
                       SizedBox(height: 24.h),
                       Text(
-                        'MosqueFinder',
+                        'Salah 360',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 32.sp,
@@ -131,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       Text(
                         'Punctuality in Prayer, Unity in Jama’at',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.95),
+                          color: Colors.white.withAlpha((0.95*255).toInt()),
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,

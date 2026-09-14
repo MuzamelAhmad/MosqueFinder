@@ -60,7 +60,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     SizedBox(height: 10.h),
                     Text(
                       "Enter your new password below",
-                      style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                      style: TextStyle(color: Colors.white.withAlpha((0.7*255).toInt())),
                     ),
                     SizedBox(height: 40.h),
                     Form(

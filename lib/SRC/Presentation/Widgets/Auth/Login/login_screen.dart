@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
           content: const Text(
-            'To provide you with punctual prayer reminders, MosqueFinder needs your permission to show notifications and set alarms.',
+            'To provide you with punctual prayer reminders, Salah 360 needs your permission to show notifications and set alarms.',
             style: TextStyle(color: Colors.white70),
           ),
           actions: [
@@ -82,6 +82,8 @@ class _LoginScreenState extends State<LoginScreen> {
       (route) => false,
     );
   }
+
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -174,6 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         Form(
+                          key: _formKey,
                           child: Column(
                             children: [
                               Consumer<TextFieldController>(
@@ -181,6 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   return TextFromFieldCommon(
                                     controller: value.text,
                                     validator: (value) => Validators().validateEmail(value),
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
                                     isIconShow: true,
                                     iConData: Icons.cancel_outlined,
                                     hintTitle: 'Email',
@@ -200,6 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   return PasswordFormField(
                                     controller: value.getPassword,
                                     validator: (value) => Validators().validatePassword(value),
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
                                     hintTitle: 'Password',
                                     show: value.isObscureText,
                                     onTap: () {
@@ -244,6 +249,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : CustomBotton(
                                     text: 'Login',
                                     onTap: () {
+                                      if (!_formKey.currentState!.validate()) {
+                                        return;
+                                      }
+
                                       final textController =
                                           Provider.of<TextFieldController>(
                                             context,
@@ -294,8 +303,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   SocialAccountCard(
                     title1: 'Don\'t have an account? ',
-                    Title2: 'Sign Up',
-                    OnTap: () {
+                    title2: 'Sign Up',
+                    onTap: () {
                       context.read<TextFieldController>().allClear();
                       context.read<PasswordController>().clearPasswords();
                       Navigator.push(

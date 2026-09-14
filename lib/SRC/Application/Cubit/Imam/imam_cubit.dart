@@ -111,7 +111,7 @@ class ImamCubit extends Cubit<ImamState> {
       );
 
       final user = authResponse.user;
-      print('immmammmmm $user');
+      // print('immmammmmm $user');
       if (user == null) {
         emit(ImamSignupError('Signup failed. Try again.'));
         return;
@@ -119,7 +119,7 @@ class ImamCubit extends Cubit<ImamState> {
 
       final userId = user.id;
 
-      print("user id ------------------$userId");
+      // print("user id ------------------$userId");
 
       // 2) Insert ImamData for THIS userId
       final imam = ImamModel(
@@ -179,6 +179,12 @@ class ImamCubit extends Cubit<ImamState> {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
         emit(ImamError('User not logged in'));
+        return;
+      }
+
+      // ✅ Check if email is verified
+      if (user.emailConfirmedAt == null && user.appMetadata['provider'] == 'email') {
+        emit(ImamEmailUnverified(user.email ?? ''));
         return;
       }
 
@@ -365,6 +371,33 @@ class ImamCubit extends Cubit<ImamState> {
   }
 
   // ═══════════════════════════════════════════
+  //             Email Verification
+  // ═══════════════════════════════════════════
+
+  Future<void> resendVerificationEmail(String email) async {
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+      );
+      emit(ImamEmailResendSuccess());
+    } catch (e) {
+      emit(ImamEmailResendError('Failed to resend: $e'));
+    }
+  }
+
+  Future<void> checkEmailVerification() async {
+    emit(ImamLoading());
+    try {
+      // Refresh session to get updated emailConfirmedAt status
+      await Supabase.instance.client.auth.refreshSession();
+      await getImamData();
+    } catch (e) {
+      emit(ImamError('Verification check failed: $e'));
+    }
+  }
+
+  // ═══════════════════════════════════════════
   //             Update Password
   // ═══════════════════════════════════════════
   Future<void> updatePassword({required String newPassword}) async {
@@ -393,7 +426,10 @@ class ImamCubit extends Cubit<ImamState> {
   }
 
   Future<void> signInWithFacebook() async {
-    await _signInWithOAuth(OAuthProvider.facebook);
+    await _signInWithOAuth(
+      OAuthProvider.facebook,
+      queryParams: {'auth_type': 'rerequest'},
+    );
   }
 
   Future<void> _signInWithOAuth(
@@ -402,27 +438,28 @@ class ImamCubit extends Cubit<ImamState> {
   }) async {
     emit(ImamLoading());
     try {
-      debugPrint('APP: Starting Social Login with ${provider.name}...');
+      // debugPrint('APP: Starting Social Login with ${provider.name}...');
+      // Note: trailing slash sometimes helps with deep link matching consistency
       await Supabase.instance.client.auth.signInWithOAuth(
         provider,
-        redirectTo: 'mosquefinder://login-callback',
+        redirectTo: 'mosquefinder://login-callback/',
         queryParams: queryParams,
       );
     } catch (e) {
-      debugPrint('APP: OAuth Error -> $e');
+      // debugPrint('APP: OAuth Error -> $e');
       emit(ImamSocialLoginError('OAuth Error: $e'));
     }
   }
 
   // ✅ Triggered after deep link returns user to app
   Future<void> handlePostSocialLogin() async {
-    debugPrint('MUQTADI: Handling post-social login check...');
+    // debugPrint('MUQTADI: Handling post-social login check...');
     // Small delay to ensure session is fully propagated
     await Future.delayed(const Duration(seconds: 1));
     
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
-      debugPrint('MUQTADI: No user found after social login callback.');
+      // debugPrint('MUQTADI: No user found after social login callback.');
       return;
     }
 
@@ -430,10 +467,10 @@ class ImamCubit extends Cubit<ImamState> {
       // Check if Imam entry exists
       final existingImam = await _repo.getImamDataByUserId(user.id);
       if (existingImam != null) {
-        debugPrint('MUQTADI: Existing social user found. Logging in...');
+        // debugPrint('MUQTADI: Existing social user found. Logging in...');
         emit(ImamLoginSuccess(user.id));
       } else {
-        debugPrint('MUQTADI: New social user detected. Navigating to completion screen...');
+        // debugPrint('MUQTADI: New social user detected. Navigating to completion screen...');
         // First time social user -> collect mosque details
         emit(ImamSocialLoginIncomplete(
           userId: user.id,
@@ -442,7 +479,7 @@ class ImamCubit extends Cubit<ImamState> {
         ));
       }
     } catch (e) {
-      debugPrint('MUQTADI: Profile check error -> $e');
+      // debugPrint('MUQTADI: Profile check error -> $e');
       emit(ImamSocialLoginError('Profile check failed: $e'));
     }
   }
@@ -463,7 +500,7 @@ class ImamCubit extends Cubit<ImamState> {
 
       if (session.user == null) {
         emit(ImamLoginError('Login failed. Check your credentials.'));
-        print("login data -----------${session.user}");
+        // print("login data -----------${session.user}");
         return;
       }
 
@@ -476,12 +513,12 @@ class ImamCubit extends Cubit<ImamState> {
         emit(ImamLoginError('Imam account not found.'));
         return;
       }
-      print(imam);
+      // print(imam);
       // print("login data -----------${session.user}");
 
       emit(ImamLoginSuccess(userId));
     } on AuthException catch (e) {
-      print("login data -----------${e.message}");
+      // print("login data -----------${e.message}");
       emit(ImamLoginError(e.message));
     } catch (e) {
       // print("login data -----------$e");

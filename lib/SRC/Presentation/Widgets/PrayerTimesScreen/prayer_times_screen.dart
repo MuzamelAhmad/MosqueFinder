@@ -145,7 +145,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                             Consumer<HijriProvider>(
                               builder: (context, value, child) {
                                 return Text(
-                                  '$gregorianDate • ${value.hijriDate ?? "Hijri loading..."}',
+                                  '$gregorianDate • ${value.hijriDate}',
                                   style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: 14.sp,
@@ -159,12 +159,12 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                             Container(
                               padding: EdgeInsets.all(30.r),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
+                                color: Colors.white.withAlpha((0.1*255).toInt()),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white24, width: 2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.2),
+                                    color: Colors.black.withAlpha((0.2*255).toInt()),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),
@@ -222,11 +222,11 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
       decoration: BoxDecoration(
         color: isActive 
-            ? Colors.white.withOpacity(0.15) 
-            : Colors.white.withOpacity(0.05),
+            ? Colors.white.withAlpha((0.15*255).toInt())
+            : Colors.white.withAlpha((0.05*255).toInt()),
         borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
-          color: isActive ? Colors.greenAccent.withOpacity(0.5) : Colors.white10,
+          color: isActive ? Colors.greenAccent.withAlpha((0.5*255).toInt()) : Colors.white10,
           width: 1.5,
         ),
       ),

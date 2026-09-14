@@ -126,6 +126,34 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                 ),
               ),
+              SizedBox(height: 32.h),
+              ElevatedButton.icon(
+                onPressed: () {
+                  NotificationService.showTestNotification();
+                  CustomSnackBar.showSuccess(
+                    context,
+                    'Test alert scheduled! Please lock your phone and wait 5 seconds.',
+                  );
+                },
+                icon: const Icon(Icons.bug_report_outlined),
+                label: const Text('Test My Notifications'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white10,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                'Note: If notifications don\'t appear, ensure "Alarms & Reminders" is enabled in system settings.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: Colors.white54,
+                ),
+              ),
             ],
           ),
         ),

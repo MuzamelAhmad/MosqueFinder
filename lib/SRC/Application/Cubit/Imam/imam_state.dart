@@ -129,3 +129,16 @@ class ImamSocialLoginError extends ImamState {
   final String message;
   ImamSocialLoginError(this.message);
 }
+
+// ── Email Verification ──────────────────────
+class ImamEmailUnverified extends ImamState {
+  final String email;
+  ImamEmailUnverified(this.email);
+}
+
+class ImamEmailResendSuccess extends ImamState {}
+
+class ImamEmailResendError extends ImamState {
+  final String message;
+  ImamEmailResendError(this.message);
+}

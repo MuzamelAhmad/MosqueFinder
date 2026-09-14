@@ -4,7 +4,6 @@ import 'package:mosque_finder/SRC/Application/Services/shared_prefs_service.dart
 import 'package:mosque_finder/SRC/Data/Resources/App_Strings/app_titles.dart';
 import 'package:mosque_finder/SRC/Data/Resources/Export/exports.dart';
 
-import '../../../Application/Utils/Extensions/padding.dart';
 import '../../Common/common_Icon.dart';
 import 'components/wierd_card.dart';
 
@@ -115,7 +114,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Colors.white.withOpacity(0.1),
+                          backgroundColor: Colors.white.withAlpha((0.1*255).toInt()),
                           child: Text(
                             count.toString(),
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -160,13 +159,17 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    CommonIconData(
-                      icanData: Icons.arrow_back_outlined,
-                      bgColor: theme.colorScheme.surface.withAlpha(
-                        (255 * 0.1).toInt(),
-                      ),
-                      onTap: () => Navigator.pop(context),
+                    SizedBox(
+                      height: 24.h,
+                      width: 24.w,
                     ),
+                    // CommonIconData(
+                    //   icanData: Icons.arrow_back_outlined,
+                    //   bgColor: theme.colorScheme.surface.withAlpha(
+                    //     (255 * 0.1).toInt(),
+                    //   ),
+                    //   onTap: () => Navigator.pop(context),
+                    // ),
                     Text(
                       AppTitles.tasbih,
                       style: const TextStyle(

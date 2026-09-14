@@ -7,13 +7,13 @@ import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/Login/controller/com
 
 class SocialAccountCard extends StatelessWidget {
   final String title1;
-  final String Title2;
-  final void Function()? OnTap;
+  final String title2;
+  final void Function()? onTap;
   const SocialAccountCard({
     super.key,
     required this.title1,
-    required this.Title2,
-    this.OnTap,
+    required this.title2,
+    this.onTap,
   });
 
   @override
@@ -33,9 +33,9 @@ class SocialAccountCard extends StatelessWidget {
               ),
             ),
             InkWell(
-              onTap: OnTap,
+              onTap: onTap,
               child: Text(
-                Title2,
+                title2,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSecondary,
                   fontWeight: FontWeight.bold,
@@ -53,21 +53,25 @@ class SocialAccountCard extends StatelessWidget {
           ),
         ),
         SizedBox(height: 10.h),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            InkWell(
-              onTap: () => context.read<ImamCubit>().signInWithGoogle(),
-              child: LogoCard(path: AppPath.google),
-            ),
-            SizedBox(width: 10.w),
-            InkWell(
-              onTap: () => context.read<ImamCubit>().signInWithFacebook(),
-              child: LogoCard(path: AppPath.facebook),
-            ),
-          ],
+        InkWell(
+          onTap: () => context.read<ImamCubit>().signInWithGoogle(),
+          child: LogoCard(path: AppPath.google),
         ),
+        // Row(
+        //   mainAxisAlignment: MainAxisAlignment.center,
+        //   crossAxisAlignment: CrossAxisAlignment.center,
+        //   children: [
+        //     InkWell(
+        //       onTap: () => context.read<ImamCubit>().signInWithGoogle(),
+        //       child: LogoCard(path: AppPath.google),
+        //     ),
+        //     SizedBox(width: 10.w),
+        //     InkWell(
+        //       onTap: () => context.read<ImamCubit>().signInWithFacebook(),
+        //       child: LogoCard(path: AppPath.facebook),
+        //     ),
+        //   ],
+        // ),
       ],
     );
   }

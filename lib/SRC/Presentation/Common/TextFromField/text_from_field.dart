@@ -7,6 +7,7 @@ class TextFromFieldCommon extends StatelessWidget {
   final void Function()? onTap;
   final String? Function(String?)? validator;
   final TextEditingController? controller;
+  final AutovalidateMode? autovalidateMode;
   const TextFromFieldCommon({
     super.key,
     this.hintTitle,
@@ -15,6 +16,7 @@ class TextFromFieldCommon extends StatelessWidget {
     this.onTap,
     this.validator,
     this.controller,
+    this.autovalidateMode,
   });
 
   @override
@@ -23,6 +25,7 @@ class TextFromFieldCommon extends StatelessWidget {
       cursorColor: Theme.of(context).colorScheme.onPrimary,
       controller: controller,
       validator: validator,
+      autovalidateMode: autovalidateMode,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: Theme.of(context).colorScheme.onPrimary,
       ),

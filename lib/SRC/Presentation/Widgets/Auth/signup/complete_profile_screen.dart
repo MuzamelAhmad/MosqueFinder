@@ -25,6 +25,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen>
   double? _latitude;
   double? _longitude;
   String _cityName = '';
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -83,8 +84,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen>
           child: SafeArea(
             child: SingleChildScrollView(
               padding: EdgeInsets.all(24.w),
-              child: Column(
-                children: [
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
                   SizedBox(height: 20.h),
                   Text(
                     'Almost There!',
@@ -106,6 +109,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen>
                   TextFromFieldCommon(
                     controller: textController.mosqueName,
                     validator: (val) => val!.isEmpty ? 'Mosque name required' : null,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     hintTitle: 'Mosque Name',
                     isIconShow: true,
                     iConData: Icons.mosque_outlined,
@@ -125,7 +129,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen>
                             color: Colors.white.withOpacity(0.05),
                             border: Border.all(
                               color: _latitude != null ? Colors.greenAccent : Colors.white24,
-                              width: 1.5,
+                              width: 1.5.w,
                             ),
                             borderRadius: BorderRadius.circular(16.r),
                           ),
@@ -170,10 +174,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen>
                           : CustomBotton(
                               text: 'Finish Setup',
                               onTap: () {
-                                if (textController.mosqueName.text.trim().isEmpty) {
-                                  CustomSnackBar.showError(context, 'Please enter mosque name');
+                                if (!_formKey.currentState!.validate()) {
                                   return;
                                 }
+
                                 if (_latitude == null) {
                                   CustomSnackBar.showError(context, 'Please detect mosque location');
                                   return;
@@ -199,6 +203,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen>
           ),
         ),
       ),
+    )
     );
-  }
+    }
 }

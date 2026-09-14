@@ -64,7 +64,7 @@ class _ForgetPasswordState extends State<ForgetPassword> {
                       "Enter your email address and we'll send you a link to reset your password.",
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withAlpha((0.8*255).toInt()),
                       ),
                     ),
                     SizedBox(height: 40.h),

@@ -5,27 +5,22 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mosque_finder/SRC/Data/Resources/ThemesData/light_theme.dart';
 import 'package:mosque_finder/SRC/Presentation/Common/PasswordTextField/controller/password_controller.dart';
 import 'package:mosque_finder/SRC/Presentation/Widgets/Auth/ForgetPassword/reset_password_screen.dart';
-import 'package:mosque_finder/SRC/Presentation/Widgets/Seclection_Screen/selection_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// import 'package:timezone/data/latest.dart' as tz;
-
 import 'SRC/Application/Cubit/Imam/imam_cubit.dart';
 import 'SRC/Application/Cubit/Muqtadi/muqtadi_cubit.dart';
-import 'SRC/Application/Services/shared_prefs_service.dart';
 import 'SRC/Application/Services/notification_service.dart';
 import 'SRC/Data/repositories/DI_Services/mosque_DI.dart';
 import 'SRC/Presentation/Common/TextFromField/Controller/text_field_controller.dart';
 import 'SRC/Presentation/Widgets/PrayerTimesScreen/controller/hijri_provider.dart';
-import 'SRC/Presentation/Widgets/ImamScreen/imam_screen.dart';
 import 'SRC/Presentation/Widgets/SplashScreen/splash_screen.dart';
 
 // ✅ Global navigator key for background navigation (like password reset)
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  debugPrint('APP: Initialization started...');
+  // debugPrint('APP: Initialization started...');
   
   try {
     WidgetsFlutterBinding.ensureInitialized();
@@ -38,19 +33,19 @@ void main() async {
         authFlowType: AuthFlowType.pkce,
       ),
     );
-    debugPrint('APP: Supabase ready.');
+    // debugPrint('APP: Supabase ready.');
 
     await NotificationService.init();
-    debugPrint('APP: Notifications ready.');
+    // debugPrint('APP: Notifications ready.');
 
     getIt.registerLazySingleton<MosqueDiServices>(() => MosqueDiServices());
-    debugPrint('APP: DI Services ready.');
+    // debugPrint('APP: DI Services ready.');
 
   } catch (e) {
-    debugPrint('APP: Initialization ERROR: $e');
+    // debugPrint('APP: Initialization ERROR: $e');
   }
 
-  debugPrint('APP: Launching UI...');
+  // debugPrint('APP: Launching UI...');
   runApp(const MyApp());
 }
 
@@ -71,7 +66,7 @@ class _MyAppState extends State<MyApp> {
       final AuthChangeEvent event = data.event;
       final session = data.session;
 
-      debugPrint('APP: Auth Event: $event');
+      // debugPrint('APP: Auth Event: $event');
 
       if (event == AuthChangeEvent.passwordRecovery) {
         // Navigate to reset password screen
@@ -108,7 +103,7 @@ class _MyAppState extends State<MyApp> {
           builder: (_, child) {
             return MaterialApp(
               navigatorKey: navigatorKey,
-              title: 'Mosque Finder',
+              title: 'Salah 360',
               builder: (context, child) {
                 return Theme(data: LightTheme.getTheme(context), child: child!);
               },

@@ -19,10 +19,10 @@ class NotificationService {
     final TimezoneInfo timezone =  await FlutterTimezone.getLocalTimezone();
     final String timeZoneName = timezone.identifier;
     tz.setLocalLocation(tz.getLocation(timeZoneName));
-    debugPrint('NOTIF: Local timezone set to $timeZoneName');
+    // debugPrint('NOTIF: Local timezone set to $timeZoneName');
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('notification_icon');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
@@ -30,7 +30,7 @@ class NotificationService {
     await _notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {
-        // Handle tapping on notification if needed
+        // debugPrint('NOTIF: Notification tapped -> ${details.payload}');
       },
     );
 
@@ -104,21 +104,21 @@ class NotificationService {
     await _notificationsPlugin.cancelAll();
 
     if (times == null) {
-      debugPrint('NOTIF: No times provided to schedule');
+      // debugPrint('NOTIF: No times provided to schedule');
       return;
     }
     if (!(await isEnabled())) {
-      debugPrint('NOTIF: Notifications are disabled by user');
+      // debugPrint('NOTIF: Notifications are disabled by user');
       return;
     }
 
     // Check permissions before scheduling
     if (!(await hasPermissions())) {
-      debugPrint('NOTIF: Cannot schedule because permissions are missing');
+      // debugPrint('NOTIF: Cannot schedule because permissions are missing');
       return;
     }
 
-    debugPrint('NOTIF: Scheduling high-priority alerts...');
+    // debugPrint('NOTIF: Scheduling high-priority alerts...');
 
     // 2. Schedule each prayer
     await _scheduleDaily(1, 'Fajr', times.fajr);
@@ -139,7 +139,7 @@ class NotificationService {
     // Jumma: Friday only
     await _scheduleSpecificDays(3, 'Jumma', times.jumma, [DateTime.friday]);
     
-    debugPrint('NOTIF: All alerts scheduled successfully ✅');
+    // debugPrint('NOTIF: All alerts scheduled successfully ✅');
   }
 
   static Future<void> _scheduleDaily(int id, String name, String timeStr) async {
@@ -148,7 +148,7 @@ class NotificationService {
     final scheduleTime = _getScheduleTime(timeStr);
     if (scheduleTime == null) return;
 
-    debugPrint('NOTIF: Scheduled $name for $scheduleTime (Daily High Priority)');
+    // debugPrint('NOTIF: Scheduled $name for $scheduleTime (Daily High Priority)');
 
     await _notificationsPlugin.zonedSchedule(
       id,
@@ -162,6 +162,8 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.max,
           fullScreenIntent: true,
+          icon: 'notification_icon',
+          largeIcon: DrawableResourceAndroidBitmap('ic_launcher_foreground'),
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.alarm,
           visibility: NotificationVisibility.public,
@@ -185,7 +187,7 @@ class NotificationService {
     for (int day in days) {
       final scheduledDate = _nextInstanceOfDay(baseTime, day);
 
-      debugPrint('NOTIF: Scheduled $name for $scheduledDate (Weekly ID: $day)');
+      // debugPrint('NOTIF: Scheduled $name for $scheduledDate (Weekly ID: $day)');
 
       await _notificationsPlugin.zonedSchedule(
         id * 10 + day, // Unique ID for each day
@@ -198,6 +200,8 @@ class NotificationService {
             'Prayer Reminders',
             importance: Importance.max,
             priority: Priority.max,
+            icon: 'notification_icon',
+            largeIcon: DrawableResourceAndroidBitmap('ic_launcher_foreground'),
             fullScreenIntent: true,
             audioAttributesUsage: AudioAttributesUsage.alarm,
             category: AndroidNotificationCategory.alarm,
@@ -227,14 +231,14 @@ class NotificationService {
 
       // If the 5-min alert time has already passed today, set it for tomorrow
       if (scheduleTime.isBefore(now)) {
-        debugPrint('NOTIF: $timeStr has passed today, scheduling for tomorrow');
+        // debugPrint('NOTIF: $timeStr has passed today, scheduling for tomorrow');
         scheduleTime = scheduleTime.add(const Duration(days: 1));
       }
 
-      debugPrint('NOTIF: Final schedule calculation for $timeStr -> $scheduleTime');
+      // debugPrint('NOTIF: Final schedule calculation for $timeStr -> $scheduleTime');
       return scheduleTime;
     } catch (e) {
-      debugPrint('NOTIF: Error parsing time $timeStr -> $e');
+      // debugPrint('NOTIF: Error parsing time $timeStr -> $e');
       return null;
     }
   }
@@ -248,5 +252,39 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 7));
     }
     return scheduledDate;
+  }
+
+  // ✅ TEST: Show notification in 5 seconds
+  static Future<void> showTestNotification() async {
+    if (!(await hasPermissions())) {
+      // debugPrint('NOTIF: Cannot show test notification (No Permission)');
+      return;
+    }
+
+    final scheduledTime = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5));
+
+    // debugPrint('NOTIF: Triggering test notification for $scheduledTime');
+
+    await _notificationsPlugin.zonedSchedule(
+      999,
+      'Salah 360 Reminder ✅',
+      'If you see this, Salah 360 notifications are working correctly!',
+      scheduledTime,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'prayer_reminders_high',
+          'Prayer Reminders',
+          importance: Importance.max,
+          icon: 'notification_icon',
+          largeIcon: DrawableResourceAndroidBitmap('ic_launcher_foreground'),
+          priority: Priority.max,
+          fullScreenIntent: true,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+          category: AndroidNotificationCategory.alarm,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    );
   }
 }

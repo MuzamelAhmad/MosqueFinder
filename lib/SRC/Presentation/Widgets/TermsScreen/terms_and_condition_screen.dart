@@ -42,7 +42,7 @@ class TermsAndConditionScreen extends StatelessWidget {
                 _buildSection(
                   context,
                   '1. Our Mission',
-                  'MosqueFinder is dedicated to connecting the Muslim community with their local mosques. Our mission is to ensure every Muqtadi reaches the Mosque on time for Jama\'at through live timing updates and reliable reminders.',
+                  'Salah 360 is dedicated to connecting the Muslim community with their local mosques. Our mission is to ensure every Muqtadi reaches the Mosque on time for Jama\'at through live timing updates and reliable reminders.',
                 ),
                 _buildSection(
                   context,
@@ -59,7 +59,7 @@ class TermsAndConditionScreen extends StatelessWidget {
                 _buildSection(
                   context,
                   '4. Permissions',
-                  'To function effectively, MosqueFinder requires:\n'
+                  'To function effectively, Salah 360 requires:\n'
                   '• Location: To identify the closest mosques to you.\n'
                   '• Alarms & Reminders: To provide precise prayer alerts.\n'
                   '• Storage: To cache data for offline accessibility.',
@@ -67,7 +67,7 @@ class TermsAndConditionScreen extends StatelessWidget {
                 _buildSection(
                   context,
                   '5. Community Impact',
-                  'By using MosqueFinder, you contribute to a more punctual and connected community, strengthening the bonds of brotherhood and ensuring collective worship is never missed.',
+                  'By using Salah 360, you contribute to a more punctual and connected community, strengthening the bonds of brotherhood and ensuring collective worship is never missed.',
                 ),
                 SizedBox(height: 30.h),
                 Center(
@@ -102,7 +102,7 @@ class TermsAndConditionScreen extends StatelessWidget {
           Text(
             content,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withAlpha((0.8*255).toInt()),
               fontSize: 15.sp,
               height: 1.6,
             ),

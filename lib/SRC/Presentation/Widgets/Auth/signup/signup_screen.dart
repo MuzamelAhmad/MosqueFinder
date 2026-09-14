@@ -21,6 +21,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
   double? _longitude;
   String _cityName = '';
   String? passChecker;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -102,8 +103,8 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                   SizedBox(height: 30.h),
                   SizedBox(
                     child: Form(
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      key: GlobalKey<FormState>(),
+                      autovalidateMode: AutovalidateMode.disabled,
+                      key: _formKey,
                       child: Column(
                         children: [
                           Consumer<TextFieldController>(
@@ -111,6 +112,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                               return TextFromFieldCommon(
                                 controller: value.text,
                                 validator: (value) => Validators().validateEmail(value),
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
                                 isIconShow: true,
                                 iConData: Icons.cancel_outlined,
                                 hintTitle: 'Email',
@@ -124,6 +126,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                               return TextFromFieldCommon(
                                 controller: value.fullName,
                                 validator: (value) => value!.isEmpty ? 'Name required' : null,
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
                                 isIconShow: true,
                                 iConData: Icons.cancel_outlined,
                                 hintTitle: 'Full Name',
@@ -137,6 +140,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                               return TextFromFieldCommon(
                                 controller: value.mosqueName,
                                 validator: (value) => value!.isEmpty ? 'Mosque required' : null,
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
                                 isIconShow: true,
                                 iConData: Icons.cancel_outlined,
                                 hintTitle: 'Mosque Name',
@@ -153,6 +157,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                                   Validators().validatePassword(value);
                                   passChecker = value;
                                 },
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
                                 hintTitle: 'Password',
                                 show: value.isObscureText,
                                 onTap: () => value.toggleObscureText(),
@@ -165,6 +170,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                               return PasswordFormField(
                                 controller: value.confPassword,
                                 validator: (value) => Validators().validateConfirmPassword(value, passChecker),
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
                                 hintTitle: 'Confirm Password',
                                 show: value.getObscureText,
                                 onTap: () => value.toggleConfObscureText(),
@@ -234,6 +240,10 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                           : CustomBotton(
                               text: 'Sign Up',
                               onTap: () {
+                                if (!_formKey.currentState!.validate()) {
+                                  return;
+                                }
+
                                 final textController = context.read<TextFieldController>();
                                 final passwordController = context.read<PasswordController>();
 
@@ -259,8 +269,8 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                   SizedBox(height: 20.h),
                   SocialAccountCard(
                     title1: 'Already have an account? ',
-                    Title2: 'Sign In',
-                    OnTap: () {
+                    title2: 'Sign In',
+                    onTap: () {
                       context.read<TextFieldController>().allClear();
                       context.read<PasswordController>().clearPasswords();
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));

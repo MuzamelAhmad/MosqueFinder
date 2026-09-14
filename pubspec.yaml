@@ -50,6 +50,7 @@ dependencies:
   flutter_local_notifications: ^17.2.1
   flutter_timezone: ^5.1.0
   flutter_svg: ^2.0.10+1
+  url_launcher: ^6.2.5
 #  prayers_times: ^0.0.6
 #  prayer_timetable: ^2.2.6
 #  flutter_svg: ^2.2.4

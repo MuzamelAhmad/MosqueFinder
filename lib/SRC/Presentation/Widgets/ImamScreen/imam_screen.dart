@@ -60,13 +60,14 @@ class _ImamScreenState extends State<ImamScreen> {
             Text('Enable Alerts', style: TextStyle(color: Colors.white)),
           ],
         ),
-        content: const Text(
-          'To ensure you never miss a Jama\'at, MosqueFinder needs permission to set precise prayer alarms.',
+        content:  Text(
+          'To ensure you never miss a Jama\'at, Salah 360 needs permission to set precise prayer alarms.',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white54,)
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Later', style: TextStyle(color: Colors.white54)),
+            child: Text('Later', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white54,)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -82,7 +83,7 @@ class _ImamScreenState extends State<ImamScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
             ),
-            child: const Text('Enable'),
+            child:  Text('Enable',style:Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white54,)),
           ),
         ],
       ),
@@ -174,6 +175,14 @@ class _ImamScreenState extends State<ImamScreen> {
         if (state is ImamNoInternetError) {
           _showNoInternetDialog(context, state.message);
         }
+
+        // ── Email Resend Feedback ───────────
+        if (state is ImamEmailResendSuccess) {
+          CustomSnackBar.showSuccess(context, 'Verification email sent! Check your inbox.');
+        }
+        if (state is ImamEmailResendError) {
+          CustomSnackBar.showError(context, state.message);
+        }
       },
       builder: (context, state) {
         // Preference: Use current state data, fallback to cache
@@ -205,7 +214,7 @@ class _ImamScreenState extends State<ImamScreen> {
               ),
             ),
           ),
-          // ✅ Drawer uses cached imam if available
+          // Drawer uses cached imam if available
           drawer: imamToShow != null
               ? CustomizeDrawerScreen(imam: imamToShow)
               : null,
@@ -233,6 +242,52 @@ class _ImamScreenState extends State<ImamScreen> {
     // ── 1. Show Full Screen Loader ONLY if we have NO data at all
     if (state is ImamLoading && imamToShow == null) {
       return const Center(child: CircularProgressIndicator(color: Colors.white));
+    }
+
+    // ── 1.5 Show Verification Pending ─────
+    if (state is ImamEmailUnverified) {
+      return Center(
+        child: Container(
+          margin: EdgeInsets.all(24.w),
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.mark_email_unread_rounded, color: Colors.amberAccent, size: 64.r),
+              SizedBox(height: 24.h),
+              Text(
+                'Verification Required',
+                style: TextStyle(color: Colors.white, fontSize: 20.sp, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12.h),
+              Text(
+                'Please confirm your email address (${state.email}) to start managing prayer times.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 14.sp),
+              ),
+              SizedBox(height: 32.h),
+              ElevatedButton(
+                onPressed: () => context.read<ImamCubit>().checkEmailVerification(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 12.h),
+                ),
+                child: const Text('I\'ve Verified'),
+              ),
+              SizedBox(height: 16.h),
+              TextButton(
+                onPressed: () => context.read<ImamCubit>().resendVerificationEmail(state.email),
+                child: Text('Resend Verification Link', style: TextStyle(color: Colors.blueAccent.shade100)),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     // ── 2. Show Error ONLY if we have no cached data to fall back on
